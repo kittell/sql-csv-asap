@@ -1,0 +1,61 @@
+Bib,Name,Time,State,Country,Citizenship,Division,Gender
+11,"Kirui, Geoffrey",7777,,KEN,,Runner,M
+17,"Rupp, Galen",7798,OR,USA,,Runner,M
+23,"Osako, Suguru",7828,,JPN,,Runner,M
+21,"Biwott, Shadrack",7928,CA,USA,,Runner,M
+9,"Chebet, Wilson",7955,,KEN,,Runner,M
+15,"Abdirahman, Abdi",7965,AZ,USA,,Runner,M
+63,"Maiyo, Augustus K.",7996,CO,USA,,Runner,M
+7,"Sefir, Dino",8066,,ETH,,Runner,M
+18,"Puskedra, Luke",8085,OR,USA,,Runner,M
+20,"Ward, Jared",8128,UT,USA,,Runner,M
+22,"Quigley, Sean",8134,MA,USA,,Runner,M
+6,"Tsegay, Yemane",8207,,ETH,,Runner,M
+14,"Keflezighi, Meb",8220,CA,USA,,Runner,M
+16,"Nyasango, Cutbert",8260,,ZIM,,Runner,M
+10,"Korir, Wesley",8294,,KEN,,Runner,M
+F3,"Kiplagat, Edna",8512,,KEN,,Runner,F
+F11,"Chelimo, Rose",8571,,BRN,,Runner,F
+F23,"Hasay, Jordan",8580,OR,USA,,Runner,F
+F6,"Linden, Desiree",8706,MI,USA,,Runner,F
+F2,"Cherono, Gladys",8840,,KEN,,Runner,F
+F8,"Kipketer, Valentine",8975,,KEN,,Runner,F
+F4,"Deba, Buzunesh",9058,,ETH,,Runner,F
+F14,"Kosgei, Brigid",9108,,KEN,,Runner,F
+F15,"Nukuri, Diane",9144,,BDI,,Runner,F
+F12,"Aga, Ruti",9206,,ETH,,Runner,F
+F17,"Flanagan, Lindsey",9284,IL,USA,,Runner,F
+F32,"Herrick, Danna",9293,MI,USA,,Runner,F
+F21,"Atkins, Esther",9371,SC,USA,,Runner,F
+F103,"McMahan, Dot",9388,MI,USA,,Runner,F
+F33,"McWalters, Teresa",9390,CA,USA,,Runner,F
+W1,"Hug, Marcel E.",4684,,SUI,,Wheelchair,M
+W2,"Van Dyk, Ernst",4684,,RSA,,Wheelchair,M
+W3,"Yamamoto, Hiroyuki",4772,,JPN,,Wheelchair,M
+W5,"Fearnley, Kurt",4828,,AUS,,Wheelchair,M
+W8,"Nishida, Hiroki",4828,,JPN,,Wheelchair,M
+W6,"George, Josh",4907,IL,USA,,Wheelchair,M
+W16,"Pike, Aaron L.",4929,IL,USA,,Wheelchair,M
+W10,"Botello Jimenez, Rafael",4929,,ESP,USA,Wheelchair,M
+W14,"Madera Jimenez, Jordi",4930,,ESP,USA,Wheelchair,M
+W7,"Hokinoue, Kota",4987,,JPN,,Wheelchair,M
+W13,"Yoshida, Ryota",4998,,JPN,,Wheelchair,M
+W9,"Senbeta, James",5067,IL,USA,,Wheelchair,M
+W12,"Lawson, Simon",5106,,GBR,,Wheelchair,M
+W11,"Cassidy, Joshua R.",5163,ON,CAN,,Wheelchair,M
+W4,"Soejima, Masazumi",5169,,JPN,,Wheelchair,M
+W103,"Schar, Manuela",5297,,SUI,,Wheelchair,F
+W104,"McGrory, Amanda M.",5593,IL,USA,,Wheelchair,F
+W102,"Scaroni, Susannah E.",5597,IL,USA,,Wheelchair,F
+W101,"McFadden, Tatyana",5705,MD,USA,,Wheelchair,F
+W108,"McClammer, Chelsea",5829,IL,USA,,Wheelchair,F
+W107,"Dawes, Christie A.",5834,,AUS,,Wheelchair,F
+W105,"Reilly, Shirley S.",5836,AZ,USA,,Wheelchair,F
+W106,"Van Den Broek, Margriet",5913,,NED,,Wheelchair,F
+W112,"Gerhard, Katrina M.",6034,IL,USA,,Wheelchair,F
+W109,"Rausin, Arielle",6086,IL,USA,,Wheelchair,F
+W110,"Jones, Jade L.",6104,,GBR,,Wheelchair,F
+W111,"Roy, Diane",6248,QC,CAN,,Wheelchair,F
+W113,"Fesemyer, Jenna A.",7192,IL,USA,,Wheelchair,F
+W114,"Moore, Jill",7351,IL,USA,,Wheelchair,F
+W115,"Dailey, Sandra",9968,MO,USA,,Wheelchair,F
