@@ -28,13 +28,19 @@ def executeUserCommand(userCommand):
         'help':cmdHelp,
         'quit':cmdQuit,
         'query':cmdQuery,
-        'show tables':cmdShowTables
-        #TODO: show attributes in table - need some more processing for this one
+        'show tables':cmdShowTables,
+        'show attributes in':cmdShowAttributes
     }
     #TODO: something to handle an invalid command
     
-    result = True
-    return cmd[userCommand]()
+    if 'show attributes in' in userCommand:
+        # get remainder of string after 'show attributes in'
+        # TODO: for now, assume one space after 'show attributes in'; not nec. true
+        tableName = userCommand[len('show attributes in')+1:len(userCommand)]
+        userCommand = 'show attributes in'
+        return cmd[userCommand](tableName)
+    else:
+        return cmd[userCommand]()
 
 def getUserCommand():
     """
@@ -46,6 +52,27 @@ def getUserCommand():
         userCommand = input('> ')
         valid = validateUserCommand(userCommand)
     return userCommand
+
+def getCsvList():
+    currentDirectory = os.getcwd()
+    tableDirectory = currentDirectory + '\\tables'
+
+    # I don't think this is the best way to do this, but it works for now...
+    # os.walk through /tables directory and add files to filenames list,
+    # then walk back through filenames list and throw out everything that isn't a .csv
+    # TODO: Probably it's best to not add a non-csv to the list in the first place...
+    
+    # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#3207973
+    f = []
+    for (dirpath, dirnames, filenames) in os.walk(tableDirectory):
+        f.extend(filenames)
+        break
+
+    for entry in filenames:
+        if '.csv' not in entry:
+            filenames.remove(entry)
+
+    return filenames
 
 # COMMAND METHODS
 
@@ -68,24 +95,8 @@ def cmdQuery():
 
 def cmdShowTables():
     # show list of .csv files in /tables, one per line
-    currentDirectory = os.getcwd()
-    tableDirectory = currentDirectory + '\\tables'
 
-    # I don't think this is the best way to do this, but it works for now...
-    # os.walk through /tables directory and add files to filenames list,
-    # then walk back through filenames list and throw out everything that isn't a .csv
-    # TODO: Probably it's best to not add a non-csv to the list in the first place...
-    
-    # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#3207973
-    f = []
-    for (dirpath, dirnames, filenames) in os.walk(tableDirectory):
-        f.extend(filenames)
-        break
-
-    for entry in filenames:
-        if '.csv' not in entry:
-            filenames.remove(entry)
-
+    csvList = getCsvList()
     print('List of available tables:')
     for entry in filenames:
         # tableName is the filename minus .csv
@@ -93,6 +104,11 @@ def cmdShowTables():
         tableName = entry[0:len(entry)-4]
         print('*', tableName)
 
+    return True
+
+def cmdShowAttributes(tableName):
+    #TODO: pull values from first line of tableName.csv
+    print('TODO: show attributes in', tableName)
     return True
 
 # VALIDATION METHODS
