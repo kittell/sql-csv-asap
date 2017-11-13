@@ -2,12 +2,6 @@ import os
 
 # CLASSES
 
-class query:
-    def __init__(self, qSelect, qFrom, qWhere):
-        self.qSelect = qSelect
-        self.qFrom = qFrom
-        self.qWhere = qWhere
-
 # METHODS
 
 def getUserQuery():
@@ -132,7 +126,7 @@ def validateWhere(input):
     valid = True
     return valid
 
-def validQuery(validSelect, validFrom, validWhere):
+def validateQuery(validSelect, validFrom, validWhere):
     #TODO: should have some meaningful error messages
     valid = True
     if validSelect == False: valid = False
