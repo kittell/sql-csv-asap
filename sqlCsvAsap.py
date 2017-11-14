@@ -74,6 +74,13 @@ def get_csv_list():
 
     return filenames
 
+def csv_to_table(csv_filename):
+    # csv_filename is the table name with the .csv extension
+    # For now, assuming that all entries end in .csv, and removing last four char
+    # probably should be a validation test just in case
+    table_name = csv_filename[0:len(csv_filename)-4]
+    return table_name
+
 # COMMAND METHODS
 
 def cmd_help():
@@ -98,10 +105,8 @@ def cmd_show_tables():
 
     csv_list = get_csv_list()
     print('List of available tables:')
-    for entry in filenames:
-        # table_name is the filename minus .csv
-        # For now, assuming that all entries end in .csv, although there should be a test for it
-        table_name = entry[0:len(entry)-4]
+    for entry in csv_list:
+        table_name = csv_to_table(entry)
         print('*', table_name)
 
     return True
