@@ -1,4 +1,5 @@
 import os
+import csv
 
 # CLASSES
 
@@ -53,10 +54,10 @@ def get_user_command():
         valid = validate_user_command(user_command)
     return user_command
 
-def get_csv_list():
-    current_directory = os.getcwd()
-    table_directory = current_directory + '\\tables'
+WORKING_DIRECTORY = os.getcwd()
+TABLE_DIRECTORY = WORKING_DIRECTORY + '\\tables'
 
+def get_csv_list():
     # I don't think this is the best way to do this, but it works for now...
     # os.walk through /tables directory and add files to filenames list,
     # then walk back through filenames list and throw out everything that isn't a .csv
@@ -64,7 +65,7 @@ def get_csv_list():
     
     # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#3207973
     f = []
-    for (dirpath, dirnames, filenames) in os.walk(table_directory):
+    for (dirpath, dirnames, filenames) in os.walk(TABLE_DIRECTORY):
         f.extend(filenames)
         break
 
@@ -80,6 +81,12 @@ def csv_to_table(csv_filename):
     # probably should be a validation test just in case
     table_name = csv_filename[0:len(csv_filename)-4]
     return table_name
+
+#def csv_line_to_list(line):
+    # csv.reader returns a 'reader' object
+    #   https://docs.python.org/3.1/library/csv.html#csv.reader
+
+    #line_reader = csv.reader(open(
 
 # COMMAND METHODS
 
@@ -112,8 +119,18 @@ def cmd_show_tables():
     return True
 
 def cmd_show_attributes(table_name):
-    #TODO: pull values from first line of table_name.csv
-    print('TODO: show attributes in', table_name)
+    
+    csv_filename = table_name + '.csv'
+    csv_fullpath = TABLE_DIRECTORY + '\\' + csv_filename
+
+    with open(csv_fullpath, newline='') as f:
+        reader = csv.reader(f)
+        heading = next(reader)
+
+    print('Attributes in', table_name)
+    for attribute in heading:
+        print('*', attribute)
+
     return True
 
 # VALIDATION METHODS
