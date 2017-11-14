@@ -82,11 +82,58 @@ def csv_to_table(csv_filename):
     table_name = csv_filename[0:len(csv_filename)-4]
     return table_name
 
-#def csv_line_to_list(line):
-    # csv.reader returns a 'reader' object
-    #   https://docs.python.org/3.1/library/csv.html#csv.reader
+def parse_query(query_input):
+    # Assumption: query has been validated prior to calling this function
+    # Split query up into SELECT, FROM, and WHERE components
+    # TODO: this only handles a single value for each component; need to fix it
+    #   to handle multiple selects, froms, wheres, etc.
 
-    #line_reader = csv.reader(open(
+    # Assumption: SELECT and FROM are required
+    # Assumption: SELECT FROM WHERE must be in order
+
+    # Walk through query string
+    # Everything between SELECT and FROM becomes query_select
+    # Everything between FROM and WHERE, or FROM and end-of-string becomes query_from
+    # And so on. Each term between the entries in query_terms below is associated
+    #   with the term before it.
+
+    # Also thought about having a Query object. Going with query_dict for now.
+    query_dict = {}
+    found = {}
+
+    # list of terms to find in query
+    query_terms = ['SELECT', 'FROM', 'WHERE']
+    for term in query_terms:
+        found[term] = None
+        # See if terms are in the query input
+        # Set to false for now - will be set to True later during parsing
+        if (' ' + term + ' ') in query_input:
+            # the space is there so that you don't find the name of a table or
+            # attribute that contains select, from, etc.
+            found[term] = False
+
+        # ...but SELECT won't have a space in front of it:
+        if query_input[0:len('select')] == 'SELECT':
+            found['SELECT'] = False
+
+    # Get startingindex for each term in string
+    query_index = {}
+    for term in query_terms:
+        # Query must start with SELECT:
+        if term == 'SELECT':
+            query_index[term] = 0
+        else:
+            if found[term] == False:
+                for i in range(len(query_input)):
+                    # protect against reading past end of string:
+                    if len(query_input) - len(term) > 0:
+                        if query_input[i:i+len(term)] == term:
+                            # Found the term, grab index and break
+                            query_index[term] = i
+                            break
+
+    # TODO: get the values for each term
+    query_term_values = {}
 
 # COMMAND METHODS
 
@@ -103,6 +150,7 @@ def cmd_quit():
 def cmd_query():
     # This is the signal to the program to collect a query from the user.
     user_query = get_user_query()
+    parsed_query = parse_query(user_query)
 
     # TODO: after getting the query, parse it into its components (select, from, where, etc.)
     return True
