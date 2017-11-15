@@ -133,13 +133,24 @@ def parse_query(query_input):
                             break
 
     # TODO: get the values for each term
+    #   should grab them as a list --- possible to have multiple selects, etc.
     query_term_values = {}
 
 # COMMAND METHODS
 
 def cmd_help():
     # Show list of commands, and how to use them
-    print('TODO: description of available functions and how to use them')
+    print('The following commands are available:')
+    print('query . . . . . . . . . . . . Go to the query prompt to run a SQL query')
+    print('show tables . . . . . . . . . Show the available CSV files for querying')
+    print('show attributes in [TABLE]  . Show the available attributes in a given table.')
+    print('                              Do not include .csv at the end of the table name')
+    print('quit  . . . . . . . . . . . . Quit the program')
+    print('help  . . . . . . . . . . . . List functions available for use')
+    print('\n')
+    print('Query format:')
+    print('SELECT [attr] FROM [table] WHERE [condition]')
+    print('\n')
     return True
 
 def cmd_quit():
