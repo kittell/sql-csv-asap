@@ -82,6 +82,10 @@ def csv_to_table(csv_filename):
     table_name = csv_filename[0:len(csv_filename)-4]
     return table_name
 
+def table_to_csv(table_name):
+    csv_filename = table_name + '.csv'
+    return csv_filename
+
 def parse_query(query_input):
     # Assumption: query has been validated prior to calling this function
     # Split query up into SELECT, FROM, and WHERE components
@@ -139,7 +143,6 @@ def parse_query(query_input):
     for term in query_terms_list:
         if found[term] == True:
             i_start = query_index[term] + len(term) + 1 # +1 is to account for space
-            print('i_start:', i_start)
             # i_end: index of end of candidate term
             i_end = query_index[term] + 1
             query_term_candidates[term] = query_input[i_start:i_end + 1]
@@ -169,8 +172,118 @@ def parse_query(query_input):
     print('query_index:', query_index)
     print('query_term_candidates:', query_term_candidates)
 
+    parse_dict = {
+        'SELECT': parse_select,
+        'FROM': parse_from,
+        'WHERE': parse_where
+    }
+
     # TODO: next, parse each candidate term into the final dict that will be returned from this method
+    parsed_query = {}
+    for term in query_terms_list:
+        if found[term] == True:
+            parsed_query[term] = parse_dict[term](query_term_candidates[term])
+
+    print(parsed_query)
+    return parsed_query
+
+def parse_select(candidate):
+    candidate = candidate.strip()
+    parsed_list = candidate.split(',')
+    # Remove leading, trailing spaces
+    for i in range(len(parsed_list)):
+        parsed_list[i] = parsed_list[i].strip()
+    return parsed_list
+
+def parse_from(candidate):
+    candidate = candidate.strip()
+    parsed_list = candidate.split(',')
+    # Remove leading, trailing spaces
+    for i in range(len(parsed_list)):
+        parsed_list[i] = parsed_list[i].strip()
+    return parsed_list
+
+where_operator_list = [ '=', '<>', '<', '<=', '>', '>=' ]
+
+def parse_where(candidate):
+    # WHERE is a list of dictionaries with components: subject, verb, object
+    candidate = candidate.strip()
+    parsed_predict_list = candidate.split(' ')
+    # Remove leading, trailing spaces
+    for i in range(len(parsed_predict_list)):
+        parsed_predict_list[i] = parsed_predict_list[i].strip()
+
+    # TODO: making a lot of assumptions for demo code; fix later
+    # Assumption: getting a single where statement with three components
+    parsed_list = [
+        {
+            'Subject': parsed_predict_list[0],
+            'Verb': parsed_predict_list[1],
+            'Object': parsed_predict_list[2]
+        }
+    ]
     
+    return parsed_list
+
+# QUERY METHODS
+
+def get_comparison_function(c):
+    #inspiration: https://stackoverflow.com/a/1740759/752784
+    # operator library: https://docs.python.org/3/library/operator.html
+    return {
+            '=': operator.eq
+        }[c]
+
+def eval_binary_comparison(a, op, b):
+    return get_comparison_function(op)(a, b)
+
+def get_attribute_list(csv_fullpath):
+    with open(csv_fullpath, newline='') as f:
+        reader = csv.reader(f)
+        attribute_list = next(reader)
+    return attribute_list
+
+def perform_query(query):
+    # loop through tables (FROM)
+    # test rows (WHERE)
+    # print attribute values (SELECT)
+
+    # Assumption: SELECT and FROM are valid
+    csv_list = []
+    for table in query['FROM']:
+        csv_list.append(table_to_csv(table))
+
+    for csv_file in csv_list:
+        csv_fullpath = TABLE_DIRECTORY + '//' + csv_file
+        attribute_list = get_attribute_list(csv_fullpath)
+        with open(csv_fullpath, newline = '') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                # test each row against where criteria
+                # 1) which attribute are we testing?
+                # TODO: this is just comparing strings; fix that
+                for i in range(len(query['WHERE'])):
+                    for j in range(len(attribute_list)):
+                        #print('attribute:',attribute)
+                        #print('where/subject:',query['WHERE'][i]['Subject'])
+                        if query['WHERE'][i]['Subject'] == attribute_list[j]:
+                            # here's the test
+                            op = query['WHERE'][i]['Verb']
+                            val = query['WHERE'][i]['Object']
+                            
+                            #print(row[j])
+                            #print(val)
+                            # TODO: temp for developing
+                            if row[j] == val:
+                                for x in range(len(query['SELECT'])):
+                                    for y in range(len(attribute_list)):
+                                        if query['SELECT'][x] == '*':
+                                            print(row[y])
+                                        elif query['SELECT'][x] == attribute_list[y]:
+                                            print(row[y])
+                                            break
+                                #print(attribute, op, val)
+                            break
 
 # COMMAND METHODS
 
@@ -191,13 +304,14 @@ def cmd_help():
 
 def cmd_quit():
     # Do nothing. Return False. This will cause the main loop to exit.
-    print('Goodbye.')
+    print('***Goodbye***')
     return False
 
 def cmd_query():
     # This is the signal to the program to collect a query from the user.
     user_query = get_user_query()
     parsed_query = parse_query(user_query)
+    perform_query(parsed_query)
 
     # TODO: after getting the query, parse it into its components (select, from, where, etc.)
     return True
@@ -218,12 +332,10 @@ def cmd_show_attributes(table_name):
     csv_filename = table_name + '.csv'
     csv_fullpath = TABLE_DIRECTORY + '\\' + csv_filename
 
-    with open(csv_fullpath, newline='') as f:
-        reader = csv.reader(f)
-        heading = next(reader)
+    attribute_list = get_attribute_list(csv_fullpath)
 
     print('Attributes in', table_name)
-    for attribute in heading:
+    for attribute in attribute_list:
         print('*', attribute)
 
     return True
