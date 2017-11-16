@@ -7,36 +7,52 @@ def get_table_directory():
 
 
 def get_attribute_list(csv_fullpath):
+    """
+    DESCRIPTION: For a given path of a .csv file, return the list of attributes, 
+        which is assumed to be the values in the first row of the file
+    INPUT: csv_fullpath: full path and filename for target .csv file
+    OUTPUT: attribute_list: list containing names of attributes (strings)
+    """
     with open(csv_fullpath, newline='') as f:
         reader = csv.reader(f)
         attribute_list = next(reader)
     return attribute_list
 	
 def csv_to_table(csv_filename):
-    # csv_filename is the table name with the .csv extension
-    # For now, assuming that all entries end in .csv, and removing last four char
-    # probably should be a validation test just in case
-    table_name = csv_filename[0:len(csv_filename)-4]
+    """
+    DESCRIPTION: Remove file extension from .csv files
+    INPUT: csv_filename: filename (with extension)
+    OUTPUT: table name (filename without extension)
+    """
+    if csv_filename.endswith('.csv'):
+        table_name = csv_filename[0:len(csv_filename)-4]
+    else:
+        # If it's not a .csv, just throw the original back over the wall...
+        table_name = csv_filename
     return table_name
 
 def table_to_csv(table_name):
+    """
+    DESCRIPTION: Turn table name into filename, i.e., add .csv
+    INPUT: table name (filename without extension)
+    OUTPUT: filename (with extension)
+    """
     csv_filename = table_name + '.csv'
     return csv_filename
 
 def get_csv_list():
-    # I don't think this is the best way to do this, but it works for now...
-    # os.walk through /tables directory and add files to filenames list,
-    # then walk back through filenames list and throw out everything that isn't a .csv
-    # TODO: Probably it's best to not add a non-csv to the list in the first place...
-    
-    # https://stackoverflow.com/questions/3207219/how-do-i-list-all-files-of-a-directory#3207973
-    f = []
-    for (dirpath, dirnames, filenames) in os.walk(get_table_directory()):
-        f.extend(filenames)
-        break
+    """
+    DESCRIPTION: Get the list of .csv files from the \tables directory. These
+        are the tables that can be queried by the program.
+    INPUT: none
+    OUTPUT: csv_list: list of filenames only of .csv files in \tables
+    """
+    # method for getting list of files for a directory comes from:
+    # https://stackoverflow.com/a/41447012/752784
 
-    for entry in filenames:
-        if '.csv' not in entry:
-            filenames.remove(entry)
+    csv_list = [f for f in os.listdir(get_table_directory()) if f.endswith('.csv')]
+    return csv_list
 
-    return filenames
+def display_query_result(result_list):
+    for row in result_list:
+        print(row)

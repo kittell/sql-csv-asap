@@ -1,11 +1,8 @@
-def parse_query(query_input):
-    # Assumption: query has been validated prior to calling this function
-    # Split query up into SELECT, FROM, and WHERE components
-    # TODO: this only handles a single value for each component; need to fix it
-    #   to handle multiple selects, froms, wheres, etc.
+TESTPRINT = False
 
-    # Assumption: SELECT and FROM are required
-    # Assumption: SELECT FROM WHERE must be in order
+def parse_query(query_input):
+    # Split query up into SELECT, FROM, and WHERE components
+    # Assumption: SELECT and FROM are required - TODO: error if not
 
     # Walk through query string
     # Everything between SELECT and FROM becomes query_select
@@ -13,32 +10,30 @@ def parse_query(query_input):
     # And so on. Each term between the entries in query_terms_list below is associated
     #   with the term before it.
 
-    # Also thought about having a Query object. Going with query_dict for now.
-    query_dict = {}
-    found = {}
 
-    # list of terms to find in query
-    query_terms_list = ['SELECT', 'FROM', 'WHERE']
+    # TODO: extend this to ORDER BY, GROUP BY, etc.
+    query_terms_list = ['SELECT', 'FROM', 'WHERE'] # List of query terms that can be processed
+    found_terms = {}    # determines whether term has been found in query
     for term in query_terms_list:
-        found[term] = False
+        found_terms[term] = False
         # See if terms are in the query input
         if (' ' + term + ' ') in query_input:
             # the space is there so that you don't find the name of a table or
             # attribute that contains select, from, etc.
-            found[term] = True
+            found_terms[term] = True
 
         # ...but SELECT won't have a space in front of it:
-        if query_input[0:len('select')] == 'SELECT':
-            found['SELECT'] = True
+        if query_input.startswith('SELECT'):
+            found_terms['SELECT'] = True
 
-    # Get startingindex for each term in string
+    # Get starting string index for each term in string
     query_index = {}
     for term in query_terms_list:
         # Query must start with SELECT:
         if term == 'SELECT':
             query_index[term] = 0
         else:
-            if found[term] == True:
+            if found_terms[term] == True:
                 for i in range(len(query_input)):
                     # protect against reading past end of string:
                     if len(query_input) - len(term) > 0:
@@ -47,21 +42,22 @@ def parse_query(query_input):
                             query_index[term] = i
                             break
 
-    # TODO: get the candidate values for each term
-    #   "candidates" means that the entire SELECT term will be taken,
-    #   and then later have spaces removed and have multiple terms
-    #   broken into individual list items
+    #   "candidate" means that the entire SELECT value will be taken,
+    #   and then later be parsed into individual values
     query_term_candidates = {}
     for term in query_terms_list:
-        if found[term] == True:
+        # Find the start and end of each candidate query component
+        if found_terms[term] == True:
             i_start = query_index[term] + len(term) + 1 # +1 is to account for space
-            # i_end: index of end of candidate term
             i_end = query_index[term] + 1
-            query_term_candidates[term] = query_input[i_start:i_end + 1]
+            query_term_candidates[term] = query_input[i_start:i_end]
+        else:
+            # the 'none' value will be a signal later for the WHERE query
+            query_term_candidates[term] = None
 
     for i in range(len(query_terms_list)):
         term = query_terms_list[i]
-        if found[term] == True:
+        if found_terms[term] == True:
             i_start = query_index[term] + len(term)
             if i == len(query_terms_list) - 1:
                 # if it's the last term in the list: end of query_input string is
@@ -71,18 +67,21 @@ def parse_query(query_input):
                 # otherwise, it's the character before the start of the next term
                 # ...unless the next term isn't in the query
                 # TODO: need to fix this--broken logic, only works b/c there are a few terms
-                if found[query_terms_list[i + 1]] == True:
+                if found_terms[query_terms_list[i + 1]] == True:
                     i_end = query_index[query_terms_list[i + 1]]
                 else:
                     i_end = len(query_input)
 
             query_term_candidates[term] = query_input[i_start:i_end]
+        else:
+            found_terms[term] = None
 
     # TEMP: printing dict values to understand the intermediate calculations
-    print('query_terms_list:', query_terms_list)
-    print('found:', found)
-    print('query_index:', query_index)
-    print('query_term_candidates:', query_term_candidates)
+    if TESTPRINT == True:
+        print('query_terms_list:', query_terms_list)
+        print('found_terms:', found_terms)
+        print('query_index:', query_index)
+        print('query_term_candidates:', query_term_candidates)
 
     parse_dict = {
         'SELECT': parse_select,
@@ -93,10 +92,13 @@ def parse_query(query_input):
     # TODO: next, parse each candidate term into the final dict that will be returned from this method
     parsed_query = {}
     for term in query_terms_list:
-        if found[term] == True:
+        if found_terms[term] == True:
             parsed_query[term] = parse_dict[term](query_term_candidates[term])
-
-    print(parsed_query)
+        else:
+            parsed_query[term] = ''
+    if TESTPRINT == True:
+        print(parsed_query)
+    
     return parsed_query
 
 def parse_select(candidate):

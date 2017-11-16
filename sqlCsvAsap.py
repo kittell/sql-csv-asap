@@ -2,6 +2,7 @@ import os
 import csv
 import parse
 import query
+import utils
 
 def get_user_query():
     print('\nEnter SELECT-FROM-WHERE query:')
@@ -70,25 +71,24 @@ def cmd_help():
 
 def cmd_quit():
     # Do nothing. Return False. This will cause the main loop to exit.
-    print('***Goodbye***')
+    print('\n***Goodbye***\n')
     return False
 
 def cmd_query():
     # This is the signal to the program to collect a query from the user.
     user_query = get_user_query()
     parsed_query = parse.parse_query(user_query)
-    query.perform_query(parsed_query)
-
-    # TODO: after getting the query, parse it into its components (select, from, where, etc.)
+    query_result_list = query.perform_query(parsed_query)
+    utils.display_query_result(query_result_list)
     return True
 
 def cmd_show_tables():
     # show list of .csv files in /tables, one per line
 
-    csv_list = get_csv_list()
+    csv_list = utils.get_csv_list()
     print('List of available tables:')
     for entry in csv_list:
-        table_name = csv_to_table(entry)
+        table_name = utils.csv_to_table(entry)
         print('*', table_name)
 
     return True
@@ -96,9 +96,9 @@ def cmd_show_tables():
 def cmd_show_attributes(table_name):
     
     csv_filename = table_name + '.csv'
-    csv_fullpath = TABLE_DIRECTORY + '\\' + csv_filename
+    csv_fullpath = utils.get_table_directory() + '\\' + csv_filename
 
-    attribute_list = get_attribute_list(csv_fullpath)
+    attribute_list = utils.get_attribute_list(csv_fullpath)
 
     print('Attributes in', table_name)
     for attribute in attribute_list:
@@ -110,7 +110,8 @@ def cmd_show_attributes(table_name):
 # MAIN
 
 if __name__ == '__main__':
-    print('SQL CSV ASAP')
+    print('!!!SQL CSV ASAP!!!')
+    print('Type help for a list of commands')
 
     # Keep running this loop while the user is using the program.
     # Only the command 'quit' should return False, thus exiting the loop.
