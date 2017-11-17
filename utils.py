@@ -1,10 +1,18 @@
 import os
 import csv
+import codecs
+
+def get_test_mode():
+    # Set this to True to print out some info as the program runs
+    return False
 
 def get_table_directory():
 	working_directory = os.getcwd()
-	return working_directory + '\\tables'
+	return os.path.join(working_directory, 'tables')
 
+def get_csv_fullpath(csv_filename):
+    csv_fullpath = os.path.join(get_table_directory(), csv_filename)
+    return csv_fullpath
 
 def get_attribute_list(csv_fullpath):
     """
@@ -13,10 +21,19 @@ def get_attribute_list(csv_fullpath):
     INPUT: csv_fullpath: full path and filename for target .csv file
     OUTPUT: attribute_list: list containing names of attributes (strings)
     """
-    with open(csv_fullpath, newline='') as f:
+    with open(csv_fullpath, newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         attribute_list = next(reader)
     return attribute_list
+
+def get_attribute_dict(attribute_dict, csv_fullpath):
+    new_attribute_list = get_attribute_list(csv_fullpath)
+    new_table_name = csv_to_table(os.path.basename(csv_fullpath))
+    
+    #TODO: protect against adding attribute_list for same table name
+    attribute_dict[new_table_name] = new_attribute_list
+    
+    return attribute_dict
 	
 def csv_to_table(csv_filename):
     """
@@ -54,5 +71,6 @@ def get_csv_list():
     return csv_list
 
 def display_query_result(result_list):
+    print('***RESULTS***')
     for row in result_list:
         print(row)

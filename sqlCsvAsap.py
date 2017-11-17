@@ -3,6 +3,7 @@ import csv
 import parse
 import query
 import utils
+import time
 
 def get_user_query():
     print('\nEnter SELECT-FROM-WHERE query:')
@@ -63,10 +64,14 @@ def cmd_help():
     print('                              Do not include .csv at the end of the table name')
     print('quit  . . . . . . . . . . . . Quit the program')
     print('help  . . . . . . . . . . . . List functions available for use')
-    print('\n')
+    print()
     print('Query format:')
-    print('SELECT [attr] FROM [table] WHERE [condition]')
-    print('\n')
+    print('SELECT [attr] FROM [table] WHERE ([condition])')
+    print()
+    print('Note: Each WHERE condition must be contained in parentheses.')
+    print('Multiple WHERE conditions can be separated by logical operators:')
+    print('    WHERE (Year = 2000) AND (Value < 200)')
+    print()
     return True
 
 def cmd_quit():
@@ -77,9 +82,17 @@ def cmd_quit():
 def cmd_query():
     # This is the signal to the program to collect a query from the user.
     user_query = get_user_query()
+    
+    # START TIMER - after receiving user query
+    start_time = time.time()
+    
     parsed_query = parse.parse_query(user_query)
     query_result_list = query.perform_query(parsed_query)
     utils.display_query_result(query_result_list)
+    
+    # END TIMER - after displaying query
+    print("--- %s seconds ---" % (time.time() - start_time))
+    
     return True
 
 def cmd_show_tables():
@@ -96,7 +109,7 @@ def cmd_show_tables():
 def cmd_show_attributes(table_name):
     
     csv_filename = table_name + '.csv'
-    csv_fullpath = utils.get_table_directory() + '\\' + csv_filename
+    csv_fullpath = os.path.join(utils.get_table_directory(), csv_filename)
 
     attribute_list = utils.get_attribute_list(csv_fullpath)
 
