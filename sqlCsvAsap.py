@@ -13,6 +13,8 @@ def get_user_query():
 
 
 def execute_user_command(user_command):
+    
+    # cmd is the map from user input to program function
     cmd = {
         'help':cmd_help,
         'quit':cmd_quit,
@@ -21,10 +23,10 @@ def execute_user_command(user_command):
         'show attributes in':cmd_show_attributes
     }
     
-    if 'show attributes in' in user_command:
+    if user_command.startswith('show attributes in') == True:
         # get remainder of string after 'show attributes in'
-        # TODO: for now, assume one space after 'show attributes in'; not nec. true
-        table_name = user_command[len('show attributes in')+1:len(user_command)]
+        table_name = user_command[len('show attributes in'):len(user_command)]
+        table_name = table_name.strip()
         user_command = 'show attributes in'
         return cmd[user_command](table_name)
     else:
@@ -34,7 +36,7 @@ def execute_user_command(user_command):
 def get_user_command():
     # Retrieve a command line input from user.
     
-    user_command = input('\n> ').lower()
+    user_command = input('\n> ')
     return user_command
 
 
@@ -72,7 +74,9 @@ def cmd_quit():
 
 def cmd_query():
     # Collect a SQL query from the user. Parse it into components. Perform the query.
-
+    
+    # TODO: validation: must have SELECT and WHERE
+        
     # Collect a query from the user.
     user_query = get_user_query()
     
@@ -97,7 +101,7 @@ def cmd_show_tables():
     # show list of .csv files in /tables, one per line
 
     csv_list = utils.get_csv_list()
-    print('List of available tables:')
+    print('\nList of available tables:')
     for entry in csv_list:
         table_name = utils.csv_to_table(entry)
         print('*', table_name)
@@ -113,7 +117,7 @@ def cmd_show_attributes(table_name):
 
     attribute_list = utils.get_attribute_list(csv_fullpath)
 
-    print('Attributes in', table_name)
+    print('\nAttributes in', table_name)
     for attribute in attribute_list:
         print('*', attribute)
 
