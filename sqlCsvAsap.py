@@ -7,15 +7,8 @@ import time
 
 def get_user_query():
     print('\nEnter SELECT-FROM-WHERE query:\n')
-    valid = False
-    while valid == False:
-        query_input = input('query > ')
-        # parse query_input into SELECT, FROM, WHERE, etc.
-        # validate components
-        valid = True #temporary to get out of validation loop
-
-    #user_query = query(inputSelect, inputFrom, inputWhere)
-    user_query = query_input #temporary
+    user_query = input('query > ')
+    
     return user_query
 
 
