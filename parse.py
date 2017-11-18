@@ -1,7 +1,5 @@
 import utils
 
-TESTPRINT = utils.get_test_mode()
-
 # CLASSES
 
 # METHODS
@@ -51,9 +49,9 @@ def parse_query(query_input):
                             query_index[term] = i
                             break
 
-    # "candidate" means that the entire SELECT value will be taken in one chunk. It will
-    # be broken down into individual components later (if it has more than one)
-    query_term_candidates = {}
+    # "query_candidate" means that, e.g., the entire SELECT statement will be taken
+    # in one chunk. It will be broken down into individual components later
+    query_candidates = {}
     for i in range(len(query_terms_list)):
         term = query_terms_list[i]
         if found_terms[term] == True:
@@ -70,15 +68,14 @@ def parse_query(query_input):
                 else:
                     i_end = len(query_input)
 
-            query_term_candidates[term] = query_input[i_start:i_end]
+            query_candidates[term] = query_input[i_start:i_end]
 
 
     # Print dict values to understand the intermediate calculations
-    if TESTPRINT == True:
-        print('query_terms_list:', query_terms_list)
-        print('found_terms:', found_terms)
-        print('query_index:', query_index)
-        print('query_term_candidates:', query_term_candidates)
+    utils.test_print('parse_query / query_terms_list', query_terms_list)
+    utils.test_print('parse_query / found_terms', found_terms)
+    utils.test_print('parse_query / query_index', query_index)
+    utils.test_print('parse_query / query_candidates', query_candidates)
 
     # parse_cmd helps to direct traffic for validating each SQL statement
     parse_cmd = {
@@ -91,7 +88,7 @@ def parse_query(query_input):
     parsed_query = {}
     for term in query_terms_list:
         if found_terms[term] == True:
-            parsed_query[term] = parse_cmd[term](query_term_candidates[term])
+            parsed_query[term] = parse_cmd[term](query_candidates[term])
         else:
             parsed_query[term] = ''
     
@@ -105,8 +102,7 @@ def parse_query(query_input):
             )
         )
         parsed_query['SELECT'] = utils.get_attribute_list(csv_fullpath)
-        if TESTPRINT == True:
-            print('parsed_query[SELECT]:',parsed_query['SELECT'])
+        utils.test_print('parse_query / parsed_query[SELECT]',parsed_query['SELECT'])
 
     # convert all attributes in SELECT to be table.attr pairs
     # TODO: this should be its own function -- out of time, doubling up for now
@@ -169,8 +165,8 @@ def parse_query(query_input):
                 if found_attr_match == True:
                     break
 
-        if TESTPRINT == True:
-            print('parsed_query[WHERE][i][Subject]:',parsed_query['WHERE'][i]['Subject'])   
+        
+        utils.test_print('parse_query / parsed_query[WHERE][i][Subject]',parsed_query['WHERE'][i]['Subject'])   
 
     # convert all attributes in WHERE to be table.attr pairs
     # TODO: this should be its own function -- out of time, doubling up for now
@@ -202,12 +198,10 @@ def parse_query(query_input):
                 if found_attr_match == True:
                     break
 
-        if TESTPRINT == True:
-            print('parsed_query[WHERE][i][Object]:',parsed_query['WHERE'][i]['Object'])  
+        
+        utils.test_print('parse_query / parsed_query[WHERE][i][Object]',parsed_query['WHERE'][i]['Object'])  
     
-    # TEMP: printing dict values to understand the intermediate calculations
-    if TESTPRINT == True:
-        print('\nparsed_query:',parsed_query,'\n')
+    utils.test_print('\nfinal parsed_query',parsed_query)
     
     return parsed_query
 
@@ -218,18 +212,20 @@ def force_table_attribute_pairs(query):
     
 
 def parse_select(candidate):
+    # TODO: There should be validation to prove attributes exist
     candidate = candidate.strip()   # Remove leading, trailing spaces
     parsed_list = candidate.split(',')
-    # Remove leading, trailing spaces
+    # Remove leading, trailing spaces from individual terms
     for i in range(len(parsed_list)):
         parsed_list[i] = parsed_list[i].strip()
     
     return parsed_list
 
 def parse_from(candidate):
+    # TODO: There should be validation to prove tables exist
     candidate = candidate.strip()   # Remove leading, trailing spaces
     parsed_list = candidate.split(',')
-    # Remove leading, trailing spaces
+    # Remove leading, trailing spaces from individual terms
     for i in range(len(parsed_list)):
         parsed_list[i] = parsed_list[i].strip()
         
@@ -266,8 +262,7 @@ def parse_where(candidate):
             pre_parsed_list.append(candidate[i_start + 1:i_end])
             between_where_terms = True
     
-    if TESTPRINT == True:
-        print('pre_parsed_list:', pre_parsed_list)
+    utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
     
     #pre_parsed_list = candidate.split(' ')
     # Remove leading and trailing spaces, parentheses
@@ -277,14 +272,14 @@ def parse_where(candidate):
             pre_parsed_list[i] = pre_parsed_list[i].strip(j)
             parsed_connector_list[i] = parsed_connector_list[i].strip(j)
     
-    # intermediate parsed list: separate each pre_parsed_list entry into subject/verb/object
+    # intermediate parsed list: int_parsed_list
+    # Separate each pre_parsed_list WHERE entry into subject/verb/object
     # Start by finding the 'verb' - then add the things on the side to subject/object
     # Note: do two looks for verb: one for one char operator, one for two char
     
-    if TESTPRINT == True:
-        print('pre_parsed_list:', pre_parsed_list)
+    utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
     
-    where_comparison_list = [ '=', '<>', '<', '<=', '>', '>=' ]
+    where_comparison_list = ['=', '<', '>', '<>', '<=', '>=']
     int_parsed_list = []
     for item in pre_parsed_list:
         inner_int_parsed_list = []
@@ -307,11 +302,9 @@ def parse_where(candidate):
         
         int_parsed_list.append(inner_int_parsed_list)
         
-        if TESTPRINT == True:
-            print('inner_int_parsed_list:', inner_int_parsed_list)
+        utils.test_print('parse_where / inner_int_parsed_list', inner_int_parsed_list)
         
-    if TESTPRINT == True:
-        print('int_parsed_list:', int_parsed_list)
+    utils.test_print('parse_where / int_parsed_list', int_parsed_list)
     
     final_parsed_list = []
     for i in range(len(int_parsed_list)):
@@ -323,7 +316,6 @@ def parse_where(candidate):
                 'Object': int_parsed_list[i][2],
             }
         )
-    if TESTPRINT == True:
-        print('final_parsed_list:', final_parsed_list)
+    utils.test_print('parse_where / final_parsed_list', final_parsed_list)
     
     return final_parsed_list

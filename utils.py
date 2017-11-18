@@ -1,16 +1,24 @@
 import os
 import csv
 import codecs
+import operator
 
-def get_test_mode():
-    # Set this to True to print out some info as the program runs
-    return False
+
+# Set TESTPRINT to True if you want to see intermediate calculations
+TESTPRINT = True
+
+def test_print(caption, term):
+    # Print selected terms while testing
+    # TODO: make the lists and dicts look better when printing
+    if TESTPRINT == True:
+        print(caption, ' : ', term)
 
 def get_table_directory():
 	working_directory = os.getcwd()
 	return os.path.join(working_directory, 'tables')
 
 def get_csv_fullpath(csv_filename):
+    # TODO: protection for when a full path is sent to this function
     csv_fullpath = os.path.join(get_table_directory(), csv_filename)
     return csv_fullpath
 
@@ -57,6 +65,17 @@ def table_to_csv(table_name):
     csv_filename = table_name + '.csv'
     return csv_filename
 
+def table_to_csv_fullpath(table_name):
+    csv_filename = table_to_csv(table_name)
+    csv_fullpath = get_csv_fullpath(csv_filename)
+    return csv_fullpath
+
+def csv_fullpath_to_table(csv_fullpath):
+    csv_filename = os.path.basename(csv_fullpath)
+    table_name = csv_to_table(csv_filename)
+    
+    return table_name
+
 def get_csv_list():
     """
     DESCRIPTION: Get the list of .csv files from the \tables directory. These
@@ -74,3 +93,57 @@ def display_query_result(result_list):
     print('***RESULTS***')
     for row in result_list:
         print(row)
+
+def get_comparison_function(c):
+    """FUNCTION_NAME
+    DESCRIPTION: 
+    INPUT: 
+    OUTPUT: 
+    """
+    
+    # inspiration: https://stackoverflow.com/a/1740759/752784
+    # operator library: https://docs.python.org/3/library/operator.html
+    return {
+            '=': operator.eq,
+            '<': operator.lt,
+            '<=': operator.le,
+            '<>': operator.ne,
+            '>': operator.gt,
+            '>=': operator.ge,
+            'AND': operator.and_,
+            'OR': operator.or_,
+            'NOT': operator.not_
+        }[c]
+
+        
+def eval_binary_comparison(a, op, b):
+    """FUNCTION_NAME
+    DESCRIPTION: 
+    INPUT: 
+    OUTPUT: 
+    """
+    
+    return get_comparison_function(op)(a, b)
+
+
+def parse_table_attribute_pair(ta):
+    """PARSE_TABLE_ATTRIBUTE_PAIR
+    DESCRIPTION: splits a table.attr string into [table, attr]
+    INPUT: 
+    OUTPUT: 
+    """
+    
+    # For a table.attr pair, split into [table, attr]
+    # Assumption: zero or one dots
+    if '.' in ta:
+        result = ta.split('.')
+    else:
+        result = ['', ta]
+    return result
+
+def combine_table_attribute_pair(t, a):
+    result = ''
+    if t != '':
+        result = t + '.'
+    result = result + a
+    return result
