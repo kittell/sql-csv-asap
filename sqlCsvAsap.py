@@ -6,7 +6,7 @@ import utils
 import time
 
 def get_user_query():
-    print('\nEnter SELECT-FROM-WHERE query:')
+    print('\nEnter SELECT-FROM-WHERE query:\n')
     valid = False
     while valid == False:
         query_input = input('query > ')
@@ -18,11 +18,6 @@ def get_user_query():
     user_query = query_input #temporary
     return user_query
 
-def validate_user_command(user_command):
-    # TODO - check if it's in the cmd dictionary
-    # TODO - maybe also handle the capitalization
-    valid = True
-    return valid
 
 def execute_user_command(user_command):
     cmd = {
@@ -32,7 +27,6 @@ def execute_user_command(user_command):
         'show tables':cmd_show_tables,
         'show attributes in':cmd_show_attributes
     }
-    #TODO: something to handle an invalid command
     
     if 'show attributes in' in user_command:
         # get remainder of string after 'show attributes in'
@@ -43,15 +37,11 @@ def execute_user_command(user_command):
     else:
         return cmd[user_command]()
 
+
 def get_user_command():
-    """
-    Retrieve a command line command from user.
-    Validate it, then pass it back.
-    """
-    valid = False
-    while valid == False:
-        user_command = input('\n> ')
-        valid = validate_user_command(user_command)
+    # Retrieve a command line input from user.
+    
+    user_command = input('\n> ').lower()
     return user_command
 
 
@@ -60,6 +50,7 @@ def get_user_command():
 
 def cmd_help():
     # Show list of commands, and how to use them
+    
     print('The following commands are available:')
     print('query . . . . . . . . . . . . Go to the query prompt to run a SQL query')
     print('show tables . . . . . . . . . Show the available CSV files for querying')
@@ -75,28 +66,39 @@ def cmd_help():
     print('Multiple WHERE conditions can be separated by logical operators:')
     print('    WHERE (Year = 2000) AND (Value < 200)')
     print()
+    
     return True
+
 
 def cmd_quit():
     # Do nothing. Return False. This will cause the main loop to exit.
+    
     print('\n***Goodbye***\n')
     return False
 
+
 def cmd_query():
-    # This is the signal to the program to collect a query from the user.
+    # Collect a SQL query from the user. Parse it into components. Perform the query.
+
+    # Collect a query from the user.
     user_query = get_user_query()
     
-    # START TIMER - after receiving user query
-    start_time = time.time()
+    # If user_query is an empty string, don't do anything, return to main
+    if user_query != '':
     
-    parsed_query = parse.parse_query(user_query)
-    query_result_list = query.perform_query(parsed_query)
-    utils.display_query_result(query_result_list)
+        # START TIMER - after receiving user query
+        start_time = time.time()
+        
+        # Parse query. Perform query. Display results.
+        parsed_query = parse.parse_query(user_query)
+        query_result_list = query.perform_query(parsed_query)
+        utils.display_query_result(query_result_list)
     
-    # END TIMER - after displaying query
-    print("--- %s seconds ---" % (time.time() - start_time))
+        # END TIMER - after displaying query
+        print("--- %s seconds ---" % (time.time() - start_time))
     
     return True
+
 
 def cmd_show_tables():
     # show list of .csv files in /tables, one per line
@@ -109,7 +111,9 @@ def cmd_show_tables():
 
     return True
 
+
 def cmd_show_attributes(table_name):
+    # For a given table, show a list of its attributes
     
     csv_filename = table_name + '.csv'
     csv_fullpath = os.path.join(utils.get_table_directory(), csv_filename)
