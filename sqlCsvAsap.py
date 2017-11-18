@@ -55,6 +55,9 @@ def get_user_command():
     return user_command
 
 
+# COMMAND METHODS
+
+
 def cmd_help():
     # Show list of commands, and how to use them
     print('The following commands are available:')
@@ -124,11 +127,14 @@ def cmd_show_attributes(table_name):
 
 if __name__ == '__main__':
     print('!!!SQL CSV ASAP!!!')
-    print('Type help for a list of commands')
+    print('\nType help for a list of commands')
 
     # Keep running this loop while the user is using the program.
     # Only the command 'quit' should return False, thus exiting the loop.
     keep_going = True
     while keep_going == True:
         user_command = get_user_command()
-        keep_going = execute_user_command(user_command)
+        try:
+            keep_going = execute_user_command(user_command)
+        except KeyError:
+            print('Invalid command. Try again. Type "help" for a list of commands.')
