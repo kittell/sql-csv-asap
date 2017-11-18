@@ -95,8 +95,8 @@ def parse_query(query_input):
         else:
             parsed_query[term] = ''
     
-    # SELECT needs some more processing
-    # If the user selected *, add all attributes
+    # Further processing for SELECT statement
+    # If the user selected *, explicitly add all attributes
     if parsed_query['SELECT'][0] == '*':
         # Assumption: getting all values from just one table
         csv_fullpath = utils.get_csv_fullpath(
@@ -232,6 +232,11 @@ def parse_from(candidate):
     # Remove leading, trailing spaces
     for i in range(len(parsed_list)):
         parsed_list[i] = parsed_list[i].strip()
+        
+        # Just in case user typed table_name .csv for FROM, remove .csv , don't want it
+        if parsed_list[i].endswith('.csv'):
+            parsed_list[i] = parsed_list[i].replace('.csv', '')
+        
     return parsed_list
 
 def parse_where(candidate):
