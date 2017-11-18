@@ -7,7 +7,23 @@ import time
 
 def get_user_query():
     print('\nEnter SELECT-FROM-WHERE query:\n')
-    user_query = input('query > ')
+    
+    valid_query = False
+    while valid_query == False:
+        user_query = input('query > ')
+
+        # Query validation
+        if user_query == '':
+            # Blank query exits query command line
+            valid_query = True
+        elif 'SELECT ' not in user_query:
+            valid_query = False
+            print('\nQuery must include SELECT statement\n')
+        elif 'FROM ' not in user_query:
+            valid_query = False
+            print('\nQuery must include FROM statement\n')
+        else:
+            valid_query = True
     
     return user_query
 
