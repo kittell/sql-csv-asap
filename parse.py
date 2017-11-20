@@ -205,11 +205,6 @@ def parse_query(query_input):
     
     return parsed_query
 
-def force_table_attribute_pairs(query):
-    result = []
-    #TODO
-    return result
-    
 
 def parse_select(candidate):
     # TODO: There should be validation to prove attributes exist
@@ -243,6 +238,8 @@ def parse_where(candidate):
     #           x[WHERE]['Verb'] = '='
     #           x[WHERE]['Object'] = 'Bill'
     #TODO: each WHERE currently requires a parenthetical statement; fix later
+    
+    utils.test_print('parse_where / candidate', candidate)
     
     candidate = candidate.strip()   # Remove leading, trailing spaces
     # Walk through candidate string. Add each term between () as an item to list

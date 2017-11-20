@@ -54,6 +54,8 @@ def test_row(row, query_where, attribute_dict, checking_table_name):
     """
     
     #TODO: How are we handling joins here?
+    #   Testing 2017-11-19: If it's a join, skip it. Handle it in separate function.
+    #       This function is for testing the comparison-type WHERE queries
     result = False
     
     if query_where == '':
@@ -84,27 +86,53 @@ def check_has_join(query_where):
     """
     
     # query has a join in it if:
-    #   1) both the subject and object of a WHERE term has a '.' in it; AND
-    #   2) substrings on both sides of '.' are strings (i.e., not numbers)
+    #   1) both the subject and object of any WHERE term has a '.' in it; AND
+    #   2) substrings on both sides of '.' of any WHERE term are strings (i.e., not numbers)
     #   3) more than one table called in WHERE subject values (t1.attr, t2.attr)
     
     # TODO: This will find the . in a real number and say it's a join... fix that
+    #   Testing 2017-11-19: .split the string. Check that both sides are not numbers.
     
     result = False
     has_dot = False
+    split_not_number = False
+    multi_table = False
     table_list = []
     
-    for i in range(len(query_where)):
+    for i in range(len(query_where)):        
+        # Test 1: Subject and Object have a dot
+        # Test 2: not numbers on both sides of dot
         if '.' in query_where[i]['Subject']:
+            
             if '.' in query_where[i]['Object']:
                 has_dot = True
-        ta = utils.parse_table_attribute_pair(query_where[i]['Subject'])
-        if ta[0] != '':
-            if ta[0] not in table_list:
-                table_list.append(ta[0])
+                split_not_number = True
+                
+                utils.test_print('check_has_join / has_dot', has_dot)
+                
+                sub = query_where[i]['Subject']
+                sub_split = sub.split('.')
+                for j in sub_split:
+                    if j.isnumeric() == True:
+                        split_not_number = False
+                
+                ob = query_where[i]['Object']
+                ob_split = ob.split('.')
+                for j in ob_split:
+                    if j.isnumeric() == True:
+                        split_not_number = False
+                
+                utils.test_print('check_has_join / split_not_number', split_not_number)
+                
+                # Test 3: more than one table in WHERE query
+                if sub_split[0] != ob_split[0]:
+                    multi_table = True
+                utils.test_print('check_has_join / multi_table', multi_table)
     
-    if has_dot == True and len(table_list) > 1:
+    if has_dot == True and split_not_number == True and multi_table == True:
         result = True
+    
+    utils.test_print('check_has_join / result', result)
     
     return result
 
