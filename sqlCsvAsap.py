@@ -72,10 +72,11 @@ def cmd_help():
     print()
     print('Query format:')
     print('SELECT [attr] FROM [table] WHERE ([condition])')
-    print()
-    print('Note: Each WHERE condition must be contained in parentheses.')
-    print('Multiple WHERE conditions can be separated by logical operators:')
+    print('\nQUERY FORMATTING NOTES:')
+    print('1) Each WHERE condition must be contained in parentheses.')
+    print('2) Multiple WHERE conditions can be separated by logical operators:')
     print('    WHERE (Year = 2000) AND (Value < 200)')
+    print('3) Not equal to is handled by a <> operator')
     print()
     
     return True
