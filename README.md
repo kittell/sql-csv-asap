@@ -7,3 +7,4 @@ Here are some test queries to try:
     SELECT Name FROM BostonMarathon2017 WHERE (Country = KEN)
     SELECT Name FROM BostonMarathon2017 WHERE (Country = KEN) AND (Gender = F)
     SELECT Year, Film, Name FROM oscars WHERE (Winner = 1) AND (Award = Film Editing)
+    SELECT * FROM BostonMarathon2017 WHERE (Name LIKE %Mc%) AND (State <> IL)
