@@ -77,64 +77,6 @@ def test_row(row, query_where, attribute_dict, checking_table_name):
     
     return result
 
-def check_has_join(query_where):
-    """CHECK_HAS_JOIN
-    DESCRIPTION: Determine whether SQL query has join in WHERE conditions. Used as a
-        flag for separate query result processing.
-    INPUT: query_where: WHERE component of SQL query
-    OUTPUT: result: True if WHERE contains join; otherwise, False
-    """
-    
-    # query has a join in it if:
-    #   1) both the subject and object of any WHERE term has a '.' in it; AND
-    #   2) substrings on both sides of '.' of any WHERE term are strings (i.e., not numbers)
-    #   3) more than one table called in WHERE subject values (t1.attr, t2.attr)
-    
-    # TODO: This will find the . in a real number and say it's a join... fix that
-    #   Testing 2017-11-19: .split the string. Check that both sides are not numbers.
-    
-    result = False
-    has_dot = False
-    split_not_number = False
-    multi_table = False
-    table_list = []
-    
-    for i in range(len(query_where)):        
-        # Test 1: Subject and Object have a dot
-        # Test 2: not numbers on both sides of dot
-        if '.' in query_where[i]['Subject']:
-            
-            if '.' in query_where[i]['Object']:
-                has_dot = True
-                split_not_number = True
-                
-                utils.test_print('check_has_join / has_dot', has_dot)
-                
-                sub = query_where[i]['Subject']
-                sub_split = sub.split('.')
-                for j in sub_split:
-                    if j.isnumeric() == True:
-                        split_not_number = False
-                
-                ob = query_where[i]['Object']
-                ob_split = ob.split('.')
-                for j in ob_split:
-                    if j.isnumeric() == True:
-                        split_not_number = False
-                
-                utils.test_print('check_has_join / split_not_number', split_not_number)
-                
-                # Test 3: more than one table in WHERE query
-                if sub_split[0] != ob_split[0]:
-                    multi_table = True
-                utils.test_print('check_has_join / multi_table', multi_table)
-    
-    if has_dot == True and split_not_number == True and multi_table == True:
-        result = True
-    
-    utils.test_print('check_has_join / result', result)
-    
-    return result
 
 def check_multi_where(query_where):
     """CHECK_MULTI_WHERE
@@ -223,7 +165,7 @@ def get_select_attributes(query_select):
 
 def get_where_results(row, query_where, attribute_dict, checking_table_name, i_row):
     """GET_WHERE_RESULTS
-    DESCRIPTION: 
+    DESCRIPTION: Test a given row of csv data against all WHERE conditions.
     INPUT: 
         - row: current row being read from .csv file
         - query_where: WHERE components of SQL query
@@ -246,12 +188,45 @@ def get_where_results(row, query_where, attribute_dict, checking_table_name, i_r
                 for j in range(len(attribute_dict[table_name])):
                     # combine into table.attr pair for comparison
                     ta = utils.combine_table_attribute_pair(table_name, attribute_dict[table_name][j])
-                    
-                    # TODO: this next part assumes that subject is attribute, and object is
-                    #   an entered value. But it could be another attribute, as in a join
+                        
                     if query_where[i]['Subject'] == ta:
-                        if utils.eval_binary_comparison(row[j], query_where[i]['Verb'], query_where[i]['Object']):
-                            where_result[i] = True
+                        if query_where[i]['Join'] == False:
+                            # If this WHERE clause is not a join across tables, simply do the test
+                            if utils.eval_binary_comparison(row[j], query_where[i]['Verb'], query_where[i]['Object']):
+                                where_result[i] = True
+                                break
+                        else:
+                            # TODO: if this is a join........
+                            other_checking_ta = utils.parse_table_attribute_pair(query_where[i]['Object'])
+                            other_checking_table_name = other_ta[0]
+                            other_csv_fullpath = utils.table_to_csv_fullpath(other_checking_table_name)
+                            
+                            # open the other csv
+                            # run through the data, doing a test on the appropriate attribute
+                            # when a match is found, return true
+                            # bonus: write to a temp file to match the subject:object join row ids:
+                            #   temp filename: temp_where_[i]_join.csv
+                            #   row format: table1, table1_row, table2, table2_row
+                            
+                            with open(other_csv_fullpath, newline = '', encoding='utf-8') as f2:
+                                r2 = csv.reader(f2)
+                                next(r2)                 # Assumption: first row is header. Skip it.
+                                for row2 in r2:
+                                    #TODO: temp fix for reading blank row; more generally, for reading row with fewer
+                                    #   data entries in a row than number of attributes in header
+                                    if ''.join(row2).strip() == '':
+                                        continue
+                                    # get index for attribute value in other_table_name
+                                    for other_table_name in attribute_dict:
+                                        if other_table_name == other_checking_table_name:
+                                            for j2 in range(len(attribute_dict[other_table_name])):
+                                                other_ta = utils.combine_table_attribute_pair(other_table_name, attribute_dict[other_table_name][j])
+                                                if query_where[i]['Subject'] == other_ta:
+                                                    if utils.eval_binary_comparison(row2[j], query_where[i]['Verb'], query_where[i]['Subject']):
+                                                        where_result[i] = True
+                                                        break
+                                            
+                            where_result[i] = None  # TODO - a very temporary measure until joining works
                             break
     
     result = [(checking_table_name, i_row), where_result]
@@ -280,7 +255,6 @@ def perform_query(query):
     int_select_values = []
     final_select_results = []
     int_select_attributes = get_select_attributes(query['SELECT'])  # list of SELECTed attributes
-    has_join = check_has_join(query['WHERE'])       # WHERE condition contains table join
     has_multi_where = check_multi_where(query['WHERE'])     # multiple WHERE conditions
     
     # Build attribute dict. Used to associate attribute names (row 1) with their data.
@@ -296,9 +270,15 @@ def perform_query(query):
         with open(csv_fullpath, newline = '', encoding='utf-8') as f:
             r = csv.reader(f)
             next(r)                 # Assumption: first row is header. Skip it.
+            
             for row in r:
                 i_row = i_row + 1
 
+                #TODO: temp fix for reading blank row; more generally, for reading row with fewer
+                #   data entries in a row than number of attributes in header
+                if ''.join(row).strip() == '':
+                    continue
+                
                 # decide whether this row passes any WHERE condition
                 pass_where_condition = test_row(row, query['WHERE'], attribute_dict, table_name)
                 if pass_where_condition == True:
