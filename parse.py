@@ -4,6 +4,63 @@ import utils
 
 # METHODS
 
+def check_has_join(subject, object):
+    """CHECK_HAS_JOIN
+    DESCRIPTION: Determine whether SQL query has join in WHERE conditions. Used as a
+        flag for separate query result processing.
+    INPUT: 
+        - subject of WHERE clause of SQL query
+        - object of WHERE clause of SQL query
+    OUTPUT: result: True if WHERE contains join; otherwise, False
+    """
+    
+    # query has a join in it if:
+    #   1) both the subject and object of any WHERE term has a '.' in it; AND
+    #   2) substrings on both sides of '.' of any WHERE term are strings (i.e., not numbers)
+    #   3) more than one table called in WHERE subject values (t1.attr, t2.attr)
+    
+    # TODO: This will find the . in a real number and say it's a join... fix that
+    #   Testing 2017-11-19: .split the string. Check that both sides are not numbers.
+    
+    result = False
+    has_dot = False
+    split_not_number = False
+    multi_table = False
+    table_list = []
+    
+    # Test 1: Subject and Object have a dot
+    # Test 2: not numbers on both sides of dot
+    if '.' in subject:
+        if '.' in object:
+            has_dot = True
+            split_not_number = True
+            
+            utils.test_print('check_has_join / has_dot', has_dot)
+            
+            subject_split = subject.split('.')
+            for j in subject_split:
+                if j.isnumeric() == True:
+                    split_not_number = False
+            
+            object_split = object.split('.')
+            for j in object_split:
+                if j.isnumeric() == True:
+                    split_not_number = False
+            
+            utils.test_print('check_has_join / split_not_number', split_not_number)
+            
+            # Test 3: more than one table in WHERE query
+            if subject_split[0] != object_split[0]:
+                multi_table = True
+            utils.test_print('check_has_join / multi_table', multi_table)
+    
+    if has_dot == True and split_not_number == True and multi_table == True:
+        result = True
+    
+    utils.test_print('check_has_join / result', result)
+    
+    return result
+
 def parse_query(query_input):
     """PARSE_QUERY
     DESCRIPTION: Parse a SQL query input by user into its components (SELECT, FROM,
@@ -255,13 +312,14 @@ def parse_where(candidate):
     #           x[WHERE]['Subject'] = 'Name'
     #           x[WHERE]['Verb'] = '='
     #           x[WHERE]['Object'] = 'Bill'
+    #           x[WHERE]['Join'] = True
     #TODO: each WHERE currently requires a parenthetical statement; fix later
     
     utils.test_print('parse_where / candidate', candidate)
     
     candidate = candidate.strip()   # Remove leading, trailing spaces
     # Walk through candidate string. Add each term between () as an item to list
-    pre_parsed_list = []
+    pre_parsed_list = []            # Splits the () components into list items
     parsed_connector_list = ['']    # no connector before the first term
     
     between_where_terms = False
@@ -279,7 +337,6 @@ def parse_where(candidate):
     
     utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
     
-    #pre_parsed_list = candidate.split(' ')
     # Remove leading and trailing spaces, parentheses
     remove_list = [' ', '(', ')']
     for i in range(len(pre_parsed_list)):
@@ -322,11 +379,17 @@ def parse_where(candidate):
                 break
         subject = item[0:i_start]
         object = item[i_end + 1:len(item)]
+        
+        join = check_has_join(subject, object)
+        
         inner_int_parsed_list.append(subject)
         inner_int_parsed_list.append(verb)
         inner_int_parsed_list.append(object)
+        inner_int_parsed_list.append(join)
         for i in range(len(inner_int_parsed_list)):
-            inner_int_parsed_list[i] = inner_int_parsed_list[i].strip()   # Remove leading, trailing spaces
+            if type(inner_int_parsed_list[i]) is str:
+                # .strip() will fail on boolean 'Join'
+                inner_int_parsed_list[i] = inner_int_parsed_list[i].strip()   # Remove leading, trailing spaces
         
         int_parsed_list.append(inner_int_parsed_list)
         
@@ -342,6 +405,7 @@ def parse_where(candidate):
                 'Subject': int_parsed_list[i][0],
                 'Verb': int_parsed_list[i][1],
                 'Object': int_parsed_list[i][2],
+                'Join': int_parsed_list[i][3]
             }
         )
     utils.test_print('parse_where / final_parsed_list', final_parsed_list)
