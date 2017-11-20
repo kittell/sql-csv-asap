@@ -207,6 +207,12 @@ def parse_query(query_input):
 
 
 def parse_select(candidate):
+    """FUNCTION_NAME
+    DESCRIPTION: 
+    INPUT: candidate SELECT clause of input SQL query
+    OUTPUT: parsed_list: list of individual components of SELECT clause
+    """
+    
     # TODO: There should be validation to prove attributes exist
     candidate = candidate.strip()   # Remove leading, trailing spaces
     parsed_list = candidate.split(',')
@@ -217,6 +223,12 @@ def parse_select(candidate):
     return parsed_list
 
 def parse_from(candidate):
+    """FUNCTION_NAME
+    DESCRIPTION: 
+    INPUT: candidate FROM clause of input SQL query
+    OUTPUT: parsed_list: list of individual components of FROM clause
+    """
+    
     # TODO: There should be validation to prove tables exist
     candidate = candidate.strip()   # Remove leading, trailing spaces
     parsed_list = candidate.split(',')
@@ -231,6 +243,12 @@ def parse_from(candidate):
     return parsed_list
 
 def parse_where(candidate):
+    """PARSE_WHERE
+    DESCRIPTION: 
+    INPUT: candidate WHERE clause of input SQL query
+    OUTPUT: parsed_list: list of individual components of WHERE clause
+    """
+    
     # WHERE is a list of dictionaries with components: connector, subject, verb, object
     # example: 
     #           x[WHERE]['Connector'] = 'AND'
@@ -272,7 +290,6 @@ def parse_where(candidate):
     # intermediate parsed list: int_parsed_list
     # Separate each pre_parsed_list WHERE entry into subject/verb/object
     # Start by finding the 'verb' - then add the things on the side to subject/object
-    # Note: do two looks for verb: one for one char operator, one for two char
     
     utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
     
@@ -281,8 +298,22 @@ def parse_where(candidate):
     for item in pre_parsed_list:
         inner_int_parsed_list = []
         for i in range(len(item)):
-            if item[i] in where_comparison_list:
+            # First, handle LIKE operator
+            if 'LIKE' in item:
+                if i < (len(item) - 4):
+                    if item[i:i+4] == 'LIKE':
+                        i_end = i + 3
+                        
+                        if i > 3 and item[i-4:i-1] == 'NOT':
+                            i_start = i-4       # special case for NOT LIKE
+                        else:
+                            i_start = i
+                        
+                        verb = item[i_start:i_end + 1]
+                        break
+            elif item[i] in where_comparison_list:
                 i_start = i
+                # do a second search to see if this is part of a two-character comparison (e.g., <=)
                 if item[i:i+2] in where_comparison_list:
                     i_end = i_start + 1
                 else:
