@@ -66,7 +66,6 @@ def cmd_help():
     print('query . . . . . . . . . . . . Go to the query prompt to run a SQL query')
     print('show tables . . . . . . . . . Show the available CSV files for querying')
     print('show attributes in [TABLE]  . Show the available attributes in a given table.')
-    print('                              Do not include .csv at the end of the table name')
     print('quit  . . . . . . . . . . . . Quit the program')
     print('help  . . . . . . . . . . . . List functions available for use')
     print()
