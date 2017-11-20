@@ -90,13 +90,59 @@ def get_csv_list():
     return csv_list
 
 def display_query_result(result_list):
-    print('***RESULTS***')
+    print('\n***RESULTS***')
     for row in result_list:
         print(row)
 
+
+def sql_like(a, b):
+    """SQL_LIKE
+    DESCRIPTION: Convert a given comparison operator 
+        Case 1: % wildcard at start of b
+        Case 2: % wildcard at end of b
+        Case 3: % wildcard at start and end of b
+    INPUT: 
+    OUTPUT: 
+    """
+    # Assumption: max of two % wildcards in b, one at start, one at end
+    # TODO: throw error if more than two %, or % in middle of string
+    # TODO: account for '_' matching of a single character
+    
+    # Split b into wildcards and pattern
+    # The resulting list will have an empty string where the wildcard was
+    b_split = b.split('%')
+#    print('a:', a)
+#    print('b_split:', b_split)
+    result = False
+    
+    if a == b:
+        # Case 0: it's the same string
+#        print('Case 0')
+        result = True
+    
+    elif len(b_split) == 2:
+        if b_split[0] == '':
+            # Case 1: wildcard at start of b
+            result = a.endswith(b_split[1])
+#            print('Case 1:', result)
+            
+        elif b_split[1] == '':
+            # Case 2: wildcard at end of b
+            result = a.startswith(b_split[0])
+#            print('Case 2:', result)
+            
+    elif len(b_split) == 3:
+        if b_split[0] == '' and b_split[2] == '':
+            # Case 3: wildcard at start and end of b
+            if b_split[1] in a:
+                result = True
+#            print('Case 3:', result)
+    
+    return result
+
 def get_comparison_function(c):
-    """FUNCTION_NAME
-    DESCRIPTION: 
+    """GET_COMPARISON_FUNCTION
+    DESCRIPTION: Convert a given comparison operator 
     INPUT: 
     OUTPUT: 
     """
@@ -112,7 +158,8 @@ def get_comparison_function(c):
             '>=': operator.ge,
             'AND': operator.and_,
             'OR': operator.or_,
-            'NOT': operator.not_
+            'NOT': operator.not_,
+            'LIKE': sql_like
         }[c]
 
         
