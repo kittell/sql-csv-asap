@@ -95,6 +95,15 @@ def display_query_result(result_list):
         print(row)
 
 
+def sql_not_like(a, b):
+    """SQL_NOT_LIKE
+    DESCRIPTION: Clumsy way of handling NOT LIKE as a SQL operator
+    INPUT: 
+    OUTPUT: 
+    """
+    
+    return not sql_like(a, b)
+
 def sql_like(a, b):
     """SQL_LIKE
     DESCRIPTION: Convert a given comparison operator 
@@ -159,7 +168,8 @@ def get_comparison_function(c):
             'AND': operator.and_,
             'OR': operator.or_,
             'NOT': operator.not_,
-            'LIKE': sql_like
+            'LIKE': sql_like,
+            'NOT LIKE': sql_not_like
         }[c]
 
         
