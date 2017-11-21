@@ -34,6 +34,7 @@ def get_attribute_list(csv_fullpath):
         attribute_list = next(reader)
     return attribute_list
 
+
 def get_attribute_dict(attribute_dict, csv_fullpath):
     new_attribute_list = get_attribute_list(csv_fullpath)
     new_table_name = csv_to_table(os.path.basename(csv_fullpath))
@@ -203,4 +204,17 @@ def combine_table_attribute_pair(t, a):
     if t != '':
         result = t + '.'
     result = result + a
+    return result
+
+def get_attribute_index(ta, attribute_dict):
+    table = ta[0]
+    attr = ta[1]
+    
+    result = None
+    
+    for i in range(len(attribute_dict[table])):
+        if attr == attribute_dict[table][i]:
+            result = i
+            break
+    
     return result
