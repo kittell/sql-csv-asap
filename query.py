@@ -2,237 +2,6 @@ import utils
 import csv
 import os
 
-def get_select_values(row, query_select, attribute_dict, checking_table_name):
-    """GET_SELECT_VALUES
-    DESCRIPTION: This is the projection step of the query. Loop through SELECT query. 
-        Determine which attributes to get from table. Append attribute values to 
-        list returned from function.
-    INPUT: 
-        - row: row of data from csv file
-        - query_select: full SELECT component of SQL query
-        - attribute_dict: list of attributes, organized by table
-        - checking_table_name: table holding attributes to select
-    OUTPUT: select_list: list containing values from selected attributes
-    """
-    select_list = []
-
-    # Loop through select query:
-    #   Determine which attributes to get from this table
-    #   Apply attribute values for this row to list
-    
-    #TODO: Consider appending to temp file instead of holding in memory
-    
-    # loop over select query
-    for i in range(len(query_select)):
-        # loop over attribute_dict - to get index numbers for attributes in data row
-        for table_name in attribute_dict:
-            if table_name == checking_table_name:
-                # Parse table.attribute pair from query_select
-                ta = utils.parse_table_attribute_pair(query_select[i])
-                # get the index for the attribute you want to get value of
-                for j in range(len(attribute_dict[table_name])):
-                    if ta[1] == '*':
-                        # if user chose to select all attributes via *, append value
-                        select_list.append(row[j])
-                    else:
-                        # compare table name and attribute name; add if true
-                        if ta[0] == table_name:
-                            if ta[1] == attribute_dict[table_name][j]:
-                                select_list.append(row[j])
-                                break
-    
-    return select_list
-
-
-def test_row(row, query_where, attribute_dict, checking_table_name):
-    """
-    DESCRIPTION: determines whether data row passes any WHERE condition
-    INPUT:
-        - row to test (list)
-        - where criteria or none
-    OUTPUT: true/pass; false
-    """
-    
-    #TODO: How are we handling joins here?
-    #   Testing 2017-11-19: If it's a join, skip it. Handle it in separate function.
-    #       This function is for testing the comparison-type WHERE queries
-    result = False
-    
-    if query_where == '':
-        # If WHERE wasn't specified, don't test the row, just pass it
-        result = True
-    else:
-        #loop through all WHERE conditions
-        for i in range(len(query_where)):
-            # find index of matching attribute
-            for table_name in attribute_dict:
-                if checking_table_name == table_name:
-                    for j in range(len(attribute_dict[table_name])):
-                        # combine into table.attr pair for comparison
-                        ta = table_name + '.' + attribute_dict[table_name][j]
-                        if query_where[i]['Subject'] == ta:
-                            if utils.eval_binary_comparison(row[j], query_where[i]['Verb'], query_where[i]['Object']):
-                                result = True
-                                break
-    
-    return result
-
-
-def check_multi_where(query_where):
-    """CHECK_MULTI_WHERE
-    DESCRIPTION: Determines whether SQL query has multiple WHERE conditions. Used as a 
-        flag for separate query result processing.
-    INPUT: query_where: WHERE component of SQL query
-    OUTPUT: result: True if multiple WHERE conditions; otherwise, False
-    """
-    
-    # query has multiple WHERE if:
-    #   1) len(query_where) > 1; AND
-    #   2) any connector of a WHERE term is not an empty string (i.e., must have some
-    #    logic to connect the conditions)
-    
-    result = False
-    if len(query_where) > 1:
-        for i in range(len(query_where)):
-            if query_where[i]['Connector'] != '':
-                result = True
-                break
-    
-    return result
-
-def combine_multi_where(int_select_values, int_where_results, query_where):
-    """COMBINE_MULTI_WHERE
-    DESCRIPTION: 
-    INPUT: 
-        - int_select_values: selected values that meet any WHERE condition
-        - int_where_results: results for individual WHERE condition tests
-            [(table_name, i_row), [w1, w2, ..., wn]]
-        - query_where: full parsed WHERE query - will be using the Connector values, 
-            which are the boolean connectors between the multiple WHERE conditions
-    OUTPUT: result: rows from int_select_values that pass all WHERE conditions
-    """
-        
-    #TODO: Consider appending the results to a temp file instead of holding in memory
-    
-    result = []
-    
-    # loop through each row of selected values
-    for i in range(len(int_select_values)):
-    
-        # loop through each WHERE results, comparing pairs in order
-        # TODO: Consider operator precedence, groups of conditions set off by parentheses
-        where_result_list = []          # contains results of each pair comparison
-        for w in range(len(query_where) - 1):
-            op = query_where[w+1]['Connector']
-            w1 = int_where_results[i][1][w]
-            w2 = int_where_results[i][1][w+1]
-            where_result = utils.eval_binary_comparison(w1, op, w2)
-            where_result_list.append(where_result)
-        
-        # All individual tests must be True for final result to pass
-        final_where_result = True
-        if False in where_result_list:
-            final_where_result = False
-        
-        # If this row passes all tests, add it to the final list
-        if final_where_result == True:
-            result.append(int_select_values[i])
-
-    return result
-
-
-def get_select_attributes(query_select):
-    """GET_SELECT_ATTRIBUTES
-    DESCRIPTION: Build a dict that will be used in other functions for comparing attribute
-        values read from tables.
-    INPUT: query_select: full SELECT component of SQL query
-    OUTPUT: result: dict with key:value as table_name:[attributes]
-    """
-    result = {}
-    
-    # 1) Keys of dict will be the unique list of tables from SELECT query
-    for attr in query_select:
-        ta = utils.parse_table_attribute_pair(attr)
-        result[ta[0]] = []
-    
-    # 2) append attributes to empty list in dict values
-    for attr in query_select:
-        ta = utils.parse_table_attribute_pair(attr)
-        result[ta[0]].append(ta[1])
-    
-    return result
-
-
-def get_where_results(row, query_where, attribute_dict, checking_table_name, i_row):
-    """GET_WHERE_RESULTS
-    DESCRIPTION: Test a given row of csv data against all WHERE conditions.
-    INPUT: 
-        - row: current row being read from .csv file
-        - query_where: WHERE components of SQL query
-        - checking_table_name: table where data row is being read from
-        - i_row: row number of table
-    OUTPUT: result: array that matches table/row with its WHERE condition test results
-        [((table_name, i_row), [where_result])]
-    """
-    # TODO: This function might be able to replace/make unnecessary test_row()
-    
-    result = []
-    where_result = []
-    
-    for i in range(len(query_where)):
-        where_result.append(False)
-
-        # find index of table.attribute being tested
-        for table_name in attribute_dict:
-            if table_name == checking_table_name:
-                for j in range(len(attribute_dict[table_name])):
-                    # combine into table.attr pair for comparison
-                    ta = utils.combine_table_attribute_pair(table_name, attribute_dict[table_name][j])
-                        
-                    if query_where[i]['Subject'] == ta:
-                        if query_where[i]['Join'] == False:
-                            # If this WHERE clause is not a join across tables, simply do the test
-                            if utils.eval_binary_comparison(row[j], query_where[i]['Verb'], query_where[i]['Object']):
-                                where_result[i] = True
-                                break
-                        else:
-                            # TODO: if this is a join........
-                            other_checking_ta = utils.parse_table_attribute_pair(query_where[i]['Object'])
-                            other_checking_table_name = other_ta[0]
-                            other_csv_fullpath = utils.table_to_csv_fullpath(other_checking_table_name)
-                            
-                            # open the other csv
-                            # run through the data, doing a test on the appropriate attribute
-                            # when a match is found, return true
-                            # bonus: write to a temp file to match the subject:object join row ids:
-                            #   temp filename: temp_where_[i]_join.csv
-                            #   row format: table1, table1_row, table2, table2_row
-                            
-                            with open(other_csv_fullpath, newline = '', encoding='utf-8') as f2:
-                                r2 = csv.reader(f2)
-                                next(r2)                 # Assumption: first row is header. Skip it.
-                                for row2 in r2:
-                                    #TODO: temp fix for reading blank row; more generally, for reading row with fewer
-                                    #   data entries in a row than number of attributes in header
-                                    if ''.join(row2).strip() == '':
-                                        continue
-                                    # get index for attribute value in other_table_name
-                                    for other_table_name in attribute_dict:
-                                        if other_table_name == other_checking_table_name:
-                                            for j2 in range(len(attribute_dict[other_table_name])):
-                                                other_ta = utils.combine_table_attribute_pair(other_table_name, attribute_dict[other_table_name][j])
-                                                if query_where[i]['Subject'] == other_ta:
-                                                    if utils.eval_binary_comparison(row2[j], query_where[i]['Verb'], query_where[i]['Subject']):
-                                                        where_result[i] = True
-                                                        break
-                                            
-                            where_result[i] = None  # TODO - a very temporary measure until joining works
-                            break
-    
-    result = [(checking_table_name, i_row), where_result]
-    
-    return result
-
 def perform_query(query):
     """PERFORM_QUERY
     DESCRIPTION: This is where the query work starts. Take a parsed SQL query, apply it
@@ -263,26 +32,11 @@ def perform_query(query):
     for csv_fullpath in csv_list:
         attribute_dict = utils.get_attribute_dict(attribute_dict, csv_fullpath)
     
-    utils.test_print('perform_query / attribute_dict', attribute_dict)
+    #utils.test_print('perform_query / attribute_dict', attribute_dict)
     
     # Determine which WHERE clauses are joins or attribute constraints
-    where_joins = []
-    where_constraints = {}
-    for i in range(len(query['WHERE'])):
-        utils.test_print('perform_query / i', i)
-        if query['WHERE'][i]['Join'] == True:
-            where_joins.append(i)
-            utils.test_print('perform_query / where_joins', where_joins)
-        else:
-            ta = utils.parse_table_attribute_pair(query['WHERE'][i]['Subject'])
-            utils.test_print('perform_query / ta', ta)
-            if ta[0] not in where_constraints:
-                where_constraints[ta[0]] = []
-            where_constraints[ta[0]].append(i)
-            utils.test_print('perform_query / where_constraints', where_constraints)
-    
-    utils.test_print('perform_query / where_joins', where_joins)
-    utils.test_print('perform_query / where_constraints', where_constraints)
+    join_constraints = map_join_constraints(query['WHERE'])
+    value_constraints = map_value_constraints(query['WHERE'])
     
     # Walk through joins first.
     # For a pair of joins from table1 to table2, walk through table1 and find the
@@ -290,93 +44,237 @@ def perform_query(query):
     # Write the result to a temp file: join_map_[i].csv in the format;
     # table1, row1, table2, row2.
     
-    # TODO: wipe temp files that may exist
+    # wipe temp files that may exist - b/c we're appending temp results, not overwriting
+    # TODO: this should also happen at the end, except in test conditions where you want to see int results
+    utils.remove_temp_files()
     
     # TODO: do it like this: for each joined pair:
-    #   1) apply attribute constraints to table 1 row
-    #   2) apply table1-table2 join
-    #   3) apply attribute constraints to table 2 row
+    #   For row1 in each table_a in value_constraints:
+    #       If row1 passes value_constraints[table_a]:
+    #           If there are any join_constraints including table_a-table_b
+    #               For row2 in each table_b:
+    #                   If row2 passes value_constraints[table_b]
     
-    if len(where_joins) > 0:
-        for i in range(len(where_joins)):
-            ta1 = utils.parse_table_attribute_pair(query['WHERE'][i]['Subject'])
-            ta2 = utils.parse_table_attribute_pair(query['WHERE'][i]['Object'])
-            csv1 = utils.table_to_csv_fullpath(ta1[0])
-            csv2 = utils.table_to_csv_fullpath(ta2[0])
-            
-            # Get index for join attributes to test
-            a1 = utils.get_attribute_index(ta1, attribute_dict)
-            a2 = utils.get_attribute_index(ta2, attribute_dict)
-                        
+    # TODO: be smart about joins: b/c you walk table2 so often, make sure it's the smaller table
+    
+    table_list = []
+    for table in query['FROM']:
+        table_list.append(table)
+    
+    for table1 in table_list:
+        if table1 not in join_constraints:
+            # if there are no joins, just apply value_constraints to single table
+            csv1 = utils.table_to_csv_fullpath(table1)
             with open(csv1, newline = '', encoding = 'utf-8') as f1:
+                utils.test_print('perform_query / open(csv1)', csv1)
                 i_row1 = 1
                 r1 = csv.reader(f1)
                 next(r1)            # Assumption: first row is header. Skip it.
-                
                 for row1 in r1:
                     i_row1 = i_row1 + 1
                     # Skip over blank rows
                     if ''.join(row1).strip() == '':
                         continue
-                    
-                    # Before diving into join tests, see if this row meets the 
-                    # attribute constraints
-                    
-                    constraints_list = []
-                    constraint = 0
-                    for j in where_constraints[ta1[0]]:
-                        constraint = constraint + 1
-                        if constraint > 1:
-                            constraints_list.append(query['WHERE'][j]['Connector'])
-                    
-                        c1 = utils.parse_table_attribute_pair(query['WHERE'][j]['Subject'])
-                        c1_index = utils.get_attribute_index(c1, attribute_dict)
-                        op = query['WHERE'][j]['Verb']
-                        obj = query['WHERE'][j]['Object']
-                        constraints_list.append(utils.eval_binary_comparison(row1[c1_index], op, obj))
-                    
-                    
-                    pass_constraints = constraints_list[0]
-                    if len(constraints_list) > 2:
-                        for j in range(len(constraints_list)):
-                            if j % 2 == 0 and j < len(constraints_list) - 2:
-                                a = constraints_list[j]
-                                op = constraints_list[j + 1]
-                                b = constraints_list[j + 2]
-                                pass_constraints = utils.eval_binary_comparison(a, op, b)
-                        
-                    
-                    if pass_constraints == True:
-                        v1 = row1[a1].strip()
-                        if v1 == '':
-                            # don't join null values
-                            continue
-                        utils.test_print('perform_query / v1', v1)
-                        with open(csv2, newline = '', encoding = 'utf-8') as f2:
-                            i_row2 = 1
-                            r2 = csv.reader(f2)
-                            next(r2)        # Assumption: first row is header. Skip it.
-                        
-                            for row2 in r2:
-                                i_row2 = i_row2 + 1
-                                # Skip over blank rows
-                                if ''.join(row2).strip() == '':
-                                    continue
-                            
-                                # TODO: apply attribute constraints on t2
-                            
-                                v2 = row2[a2].strip()
-                                if v1 == v2:
-                                    utils.test_print('perform_query / v2', v2)
-                                    append_join_pair(i, ta1[0], i_row1, ta2[0], i_row2)
-                                    break
-                        f2.closed
+                    # test row1 against value_constraints[table1]
+                    pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
+                    if pass_value_constraints:
+                        print(row1) #TODO: printing is temporary
             f1.closed
-                            
-    # After walking through joins, match map to data
-            
+        else:
+            for table_pair in join_constraints:
+                if table1 == table_pair[0]:
+                    table2 = table_pair[1]
+                    csv1 = utils.table_to_csv_fullpath(table1)
+                    csv2 = utils.table_to_csv_fullpath(table2)
+                    with open(csv1, newline = '', encoding = 'utf-8') as f1:
+                        utils.test_print('perform_query / open(csv1)', csv1)
+                        i_row1 = 1
+                        r1 = csv.reader(f1)
+                        next(r1)            # Assumption: first row is header. Skip it.
+                        for row1 in r1:
+                            i_row1 = i_row1 + 1
+                            # Skip over blank rows
+                            if ''.join(row1).strip() == '':
+                                continue
+                            # test row1 against value_constraints[table1]
+                            pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
+                            if pass_value_constraints:
+                                pass_join_constraints = test_join_constraints(table, row, value_constraints, query_where, attribute_dict)
+                                print(row1) #TODO: printing is temporary
+                    f1.closed
     
     return final_select_results
+
+def map_join_constraints(query_where):
+    """MAP_JOIN_CONSTRAINTS
+        DESCRIPTION: 
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: join_constraints: dict of list; key of dict is a tuple of (table1, table2);
+            value of idct is a list of index numbers from main WHERE query containing 
+            constraint relevant to this table-table pair
+    """
+    join_constraints = {}
+    for i in range(len(query_where)):
+        if query_where[i]['Join'] == True:
+            ta1 = utils.parse_table_attribute_pair(query_where[i]['Subject'])
+            ta2 = utils.parse_table_attribute_pair(query_where[i]['Object'])
+            table_pair = (ta1[0], ta2[0])
+            if table_pair not in join_constraints:
+                # Create empty list for key not already in join_constraints
+                join_constraints[table_pair] = []
+            join_constraints[table_pair].append(i)
+    utils.test_print('map_join_constraints / join_constraints', join_constraints)
+    return join_constraints
+
+
+def map_value_constraints(query_where):
+    """MAP_VALUE_CONSTRAINTS
+        DESCRIPTION: 
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: value_constraints: dict of lists; key of dict is the table that the list of
+            requirements applies to; value of dict is a list of index numbers from the main
+            WHERE query containing a constraint relevant to this table
+    """
+    value_constraints = {}
+    
+    for i in range(len(query_where)):
+        if query_where[i]['Join'] == False:
+            ta1 = utils.parse_table_attribute_pair(query_where[i]['Subject'])
+            table1 = ta1[0]      # just parsing to make code more understandable
+            if table1 not in value_constraints:
+                # Create empty list for key not already in value_constraints
+                value_constraints[table1] = []
+            value_constraints[table1].append(i)
+            
+    utils.test_print('map_value_constraints / value_constraints', value_constraints)
+    return value_constraints
+
+def test_value_constraints(table, row, value_constraints, query_where, attribute_dict):
+    """TEST_WHERE_CONSTRAINTS
+        DESCRIPTION: 
+        INPUT:
+            - 
+        OUTPUT: result: True if row passes WHERE constraints or if there are no constraints; 
+            otherwise, False
+    """
+    result = True
+    
+    # loop through value_constraints that apply to this table
+    # If there are none, that's OK: pass it.
+    # Why pass it? If there is no value constraint, there should be a join constraint following.
+    
+    if table in value_constraints:
+        constraint = 0
+        constraints_list = []
+        for i in value_constraints[table]:
+            # even number constraints are results of individual value_constraint tests
+            # odd numbers are boolean connectors between them
+            
+            constraint = constraint + 1
+            if constraint > 1:
+                # A connector is a boolean operator like AND. Only relevant if there is more than
+                # one value constraint for a single table. Append to constraints_list in 
+                # even-numbered slot.
+                constraints_list.append(query_where[i]['Connector'])
+        
+            ta = utils.parse_table_attribute_pair(query_where[i]['Subject'])
+            subj_index = utils.get_attribute_index(ta, attribute_dict)
+            op = query_where[i]['Verb']
+            obj = query_where[i]['Object']
+            
+            # Append result
+            constraints_list.append(utils.eval_binary_comparison(row[subj_index], op, obj))
+    
+        # only need to do extra processing if there are multiple WHERE conditions to combine, i.e., len >=2
+        #TODO: need to do some grouping when doing an OR compare on the same attribute
+        result = constraints_list[0]
+        if len(constraints_list) >= 2:
+            for i in range(len(constraints_list)):
+                if i % 2 == 0 and i < len(constraints_list) - 2:
+                    a = result
+                    op = constraints_list[i + 1]
+                    b = constraints_list[i + 2]
+                    result = utils.eval_binary_comparison(a, op, b)
+    
+    return result
+
+def test_join_constraints(table1, row1, join_constraints, query_where, attribute_dict):
+    """TEST_WHERE_CONSTRAINTS
+        DESCRIPTION: 
+        INPUT:
+            - row: list of parsed values from a row in a csv file
+            - where_constraints
+            - attribute_dict
+        OUTPUT: pass: True if row passes WHERE constraints or if there are no constraints; 
+            otherwise, False
+    """
+    result = True
+    # 0 - check join_constraints to see if there's even a table_1-table_x join
+    # 0.1 - if so, make a list of table_x to check
+    # 1 - for each row2 in each table_x:
+    #       constraint.results.append(False)
+    #       if row1 and row2 meet join_constraints: 
+    #           join_results[i] = True; go to next constraint test
+    # 2 - compare multiple join constraints against a single table1
+    
+    # 0 - Check for join constraints
+    table2_list = []
+    join_results = {}
+    selected_join_rows = {}
+    selected_join_rows[table1] = []
+    
+    for table_pair in join_constraints:
+        if table_pair[0] == table1:
+            if table_pair[1] not in table2_list:
+                table2_list.append(table_pair[1])
+                selected_join_rows[table_pair[1]] = []
+    
+    # 1 - Only need to do further processing if table1 shows up as the first in a pair of join_constraints
+    #       (if it's the second, it will be handled later)
+    # TODO: in query parsing, there should be some reordering of join constraints to limit re-reading files
+    if len(table2_list) > 0:
+        for t2 in range(len(table2_list)):
+            if find_join_row(v1, a2, csv2) != '':
+                join_results[t2] = True
+    
+    # 2 - Compare multiple join constraints on table 1, if there are any
+    
+    return result
+
+def find_join_row(v1, a2, csv2):
+    #TODO: no return value at the moment, perhaps should send something back to say yes/no found something
+    found = False
+    
+    # don't join null values
+    if v1 != '':
+        utils.test_print('find_join_value / v1', v1)
+        with open(csv2, newline = '', encoding = 'utf-8') as f2:
+            i_row2 = 1
+            r2 = csv.reader(f2)
+            next(r2)        # Assumption: first row is header. Skip it.
+        
+            for row2 in r2:
+                i_row2 = i_row2 + 1
+                # Skip over blank rows, it's a killer
+                if ''.join(row2).strip() == '':
+                    continue
+            
+                # TODO: apply attribute constraints on t2
+            
+                v2 = row2[a2].strip()
+                if v1 == v2:
+                    utils.test_print('perform_query / v2', v2)
+                    found = True
+                    break
+        f2.closed
+    
+    if found == False:
+        i_row2 = 0
+    
+    return i_row2
+    
 
 def append_join_pair(i, table1, i_row1, table2, i_row2):
     
