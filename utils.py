@@ -1,4 +1,5 @@
 import os
+import os.path
 import csv
 import codecs
 import operator
@@ -11,7 +12,11 @@ def test_print(caption, term):
     # Print selected terms while testing
     # TODO: make the lists and dicts look better when printing
     if TESTPRINT == True:
-        print(caption, ' : ', term)
+        try:
+            print(caption, ' : ', term)
+        except UnicodeEncodeError:
+            term = term.encode('ascii', 'ignore')
+            print(caption, ' : ', term)
 
 def get_table_directory():
 	working_directory = os.getcwd()
@@ -218,3 +223,13 @@ def get_attribute_index(ta, attribute_dict):
             break
     
     return result
+
+def remove_temp_files():
+    file_start_strings = ['temp_']
+    table_directory = get_table_directory()
+    file_list = os.listdir(table_directory)
+    for file in file_list:
+        for pattern in file_start_strings:
+            if os.path.basename(file).startswith(pattern) == True:
+                test_print('remove_temp_files / file', file)
+                os.remove(os.path.join(table_directory, file))
