@@ -27,6 +27,11 @@ def get_csv_fullpath(csv_filename):
     csv_fullpath = os.path.join(get_table_directory(), csv_filename)
     return csv_fullpath
 
+def get_filtered_table_fullpath(table):
+    table_directory = get_table_directory()
+    filtered_filename = 'temp_filtered_' + table + '.csv'
+    return os.path.join(table_directory, filtered_filename)
+
 def get_attribute_list(csv_fullpath):
     """
     DESCRIPTION: For a given path of a .csv file, return the list of attributes, 
@@ -68,7 +73,7 @@ def table_to_csv(table_name):
     INPUT: table name (filename without extension)
     OUTPUT: filename (with extension)
     """
-    csv_filename = table_name + '.csv'
+    csv_filename = str(table_name) + '.csv'
     return csv_filename
 
 def table_to_csv_fullpath(table_name):
@@ -212,6 +217,9 @@ def combine_table_attribute_pair(t, a):
     return result
 
 def get_attribute_index(ta, attribute_dict):
+    if '.' in ta:
+        # protection against different kind of input
+        ta = parse_table_attribute_pair(ta)
     table = ta[0]
     attr = ta[1]
     

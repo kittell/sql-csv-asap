@@ -395,7 +395,6 @@ def parse_where(query_candidates):
     # convert all attributes in WHERE to be table.attr pairs
     # TODO: this should be its own function -- out of time, doubling up for now
     for i in range(len(final_parsed_list)):
-        print('i:', i)
         # if it has a dot already, it's good to go
         select_attr = final_parsed_list[i]['Subject']
         if '.' not in select_attr:

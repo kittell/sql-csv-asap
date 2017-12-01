@@ -1,6 +1,7 @@
 import utils
 import csv
 import os
+import os.path
 
 def perform_query(query):
     """PERFORM_QUERY
@@ -35,8 +36,9 @@ def perform_query(query):
     #utils.test_print('perform_query / attribute_dict', attribute_dict)
     
     # Determine which WHERE clauses are joins or attribute constraints
-    join_constraints = map_join_constraints(query['WHERE'])
-    value_constraints = map_value_constraints(query['WHERE'])
+    query_where = query['WHERE']
+    join_constraints = map_join_constraints(query_where)
+    value_constraints = map_value_constraints(query_where)
     
     # Walk through joins first.
     # For a pair of joins from table1 to table2, walk through table1 and find the
@@ -62,25 +64,30 @@ def perform_query(query):
         table_list.append(table)
     
     for table1 in table_list:
-        if table1 not in join_constraints:
-            # if there are no joins, just apply value_constraints to single table
+        if len(join_constraints) == 0:
+            # CASE 1: no joins, just apply value_constraints to single table
             csv1 = utils.table_to_csv_fullpath(table1)
             with open(csv1, newline = '', encoding = 'utf-8') as f1:
                 utils.test_print('perform_query / open(csv1)', csv1)
-                i_row1 = 1
                 r1 = csv.reader(f1)
+                i_row1 = 1
                 next(r1)            # Assumption: first row is header. Skip it.
                 for row1 in r1:
                     i_row1 = i_row1 + 1
+                    int_select_results = []
                     # Skip over blank rows
                     if ''.join(row1).strip() == '':
                         continue
                     # test row1 against value_constraints[table1]
                     pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
                     if pass_value_constraints:
-                        print(row1) #TODO: printing is temporary
+                        #continue
+                        append_filtered_row(table1, row1, i_row1)
+                        int_select_results = project_row(int_select_results, row1, table1, query['SELECT'], attribute_dict)
+                        print(int_select_results)
             f1.closed
         else:
+            # CASE 2: joins
             for table_pair in join_constraints:
                 if table1 == table_pair[0]:
                     table2 = table_pair[1]
@@ -88,8 +95,8 @@ def perform_query(query):
                     csv2 = utils.table_to_csv_fullpath(table2)
                     with open(csv1, newline = '', encoding = 'utf-8') as f1:
                         utils.test_print('perform_query / open(csv1)', csv1)
-                        i_row1 = 1
                         r1 = csv.reader(f1)
+                        i_row1 = 1
                         next(r1)            # Assumption: first row is header. Skip it.
                         for row1 in r1:
                             i_row1 = i_row1 + 1
@@ -98,12 +105,73 @@ def perform_query(query):
                                 continue
                             # test row1 against value_constraints[table1]
                             pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
-                            if pass_value_constraints:
-                                pass_join_constraints = test_join_constraints(table, row, value_constraints, query_where, attribute_dict)
-                                print(row1) #TODO: printing is temporary
+                            if pass_value_constraints == True:
+                                pass_join_constraints = test_join_constraints(table1, row1, i_row1, join_constraints, query_where, attribute_dict, value_constraints)
+                                if pass_join_constraints == True:
+                                    append_filtered_row(table1, row1, i_row1)
+#                                    print(row1) #TODO: printing is temporary
                     f1.closed
     
+    # Gather results
+    # G1: if joins exist, walk through those files first
+    # TODO: for now: assuming one join
+    for table_pair in join_constraints:
+        table1 = table_pair[0]
+        table2 = table_pair[1]
+        filtered_tables = {}
+        filtered_tables[table1] = utils.get_filtered_table_fullpath(table1)
+        filtered_tables[table2] = utils.get_filtered_table_fullpath(table2)
+        # Check if file exists: temp_join_table1_table2.csv
+        # TODO: if it exists:
+        temp_join_file = os.path.join(utils.get_table_directory(), 'temp_join_' + table1 + '_' + table2 + '.csv')
+        utils.test_print('perform_query / temp_join_file', temp_join_file)
+        if os.path.exists(temp_join_file) == True:
+            # open temp_join file
+            with open(temp_join_file, newline = '', encoding = 'utf-8') as f_join:
+                # Walk through temp_join_file. This contains information about joined
+                # tables: (table1, i_row1, table2, i_row2)
+                # Find i_row1 and i_row2 in their corresponding temp_filtered files
+                r_join = csv.reader(f_join)
+                for row_join in r_join:
+                    int_select_results = []
+                    for col in range(len(row_join)):
+                        # Next: go to filtered_table files to retrieve data
+                        # Columns 0, 2, 4, etc. have tables; 1, 3, etc. have row numbers (i_filtered)
+                        if col % 2 == 0:
+                            if os.path.exists(filtered_tables[row_join[col]]):
+                                with open(filtered_tables[row_join[col]], newline = '', encoding = 'utf-8') as f_filtered:
+                                    table_filtered = row_join[col]
+                                    i_filtered = row_join[col + 1]
+                                    r_filtered = csv.reader(f_filtered)
+                                    for row_filtered in r_filtered:
+                                        if row_filtered[0] == i_filtered:
+                                            # This is the data you want; project it into final list
+                                            # Note: leaving out first entry in row_filtered: it is
+                                            # a row #, not part of results
+                                            int_select_results = project_row(int_select_results, row_filtered[1:len(row_filtered)], table_filtered, query['SELECT'], attribute_dict)
+                                            break                            
+                    
+                    print(int_select_results)
+                    
+            # walk through temp_join
+                # open table1.csv
+                # open table2.csv
+                # get projected values from table1 based on col 1 (2nd col)
+                # get projected values from table2 based on col 3 (4th col)
+            f_join.closed
+    
     return final_select_results
+
+def project_row(results, row, table, query_select, attribute_dict):
+    for i in range(len(query_select)):
+        # figure out which SELECT statements apply to this table
+        ta = utils.parse_table_attribute_pair(query_select[i])
+        if ta[0] == table:
+            # figure out the index in the row that holds the desired attribute value
+            a = utils.get_attribute_index(ta, attribute_dict)
+            results.append(row[a])
+
+    return results
 
 def map_join_constraints(query_where):
     """MAP_JOIN_CONSTRAINTS
@@ -111,8 +179,10 @@ def map_join_constraints(query_where):
         INPUT:
             - query_where: WHERE component of parsed SQL query
         OUTPUT: join_constraints: dict of list; key of dict is a tuple of (table1, table2);
-            value of idct is a list of index numbers from main WHERE query containing 
+            value of dict is a list of index numbers from main WHERE query containing 
             constraint relevant to this table-table pair
+            e.g., join_constraints[(table1, table2)] = 0
+                  join_constraints[(table2, table3)] = 1
     """
     join_constraints = {}
     for i in range(len(query_where)):
@@ -200,7 +270,7 @@ def test_value_constraints(table, row, value_constraints, query_where, attribute
     
     return result
 
-def test_join_constraints(table1, row1, join_constraints, query_where, attribute_dict):
+def test_join_constraints(table1, row1, i_row1, join_constraints, query_where, attribute_dict, value_constraints):
     """TEST_WHERE_CONSTRAINTS
         DESCRIPTION: 
         INPUT:
@@ -211,6 +281,7 @@ def test_join_constraints(table1, row1, join_constraints, query_where, attribute
             otherwise, False
     """
     result = True
+    persistent_result = False
     # 0 - check join_constraints to see if there's even a table_1-table_x join
     # 0.1 - if so, make a list of table_x to check
     # 1 - for each row2 in each table_x:
@@ -222,26 +293,84 @@ def test_join_constraints(table1, row1, join_constraints, query_where, attribute
     # 0 - Check for join constraints
     table2_list = []
     join_results = {}
-    selected_join_rows = {}
-    selected_join_rows[table1] = []
     
     for table_pair in join_constraints:
         if table_pair[0] == table1:
             if table_pair[1] not in table2_list:
                 table2_list.append(table_pair[1])
-                selected_join_rows[table_pair[1]] = []
     
     # 1 - Only need to do further processing if table1 shows up as the first in a pair of join_constraints
     #       (if it's the second, it will be handled later)
     # TODO: in query parsing, there should be some reordering of join constraints to limit re-reading files
-    if len(table2_list) > 0:
-        for t2 in range(len(table2_list)):
-            if find_join_row(v1, a2, csv2) != '':
-                join_results[t2] = True
     
-    # 2 - Compare multiple join constraints on table 1, if there are any
+    # loop through available combos of table2 (of a table1-table2 pair)
+    # loop through the where constraints on that pair
+    for table2 in table2_list:
+        # walk through table 2
+        csv2 = utils.table_to_csv_fullpath(table2)
+        with open(csv2, newline = '', encoding = 'utf-8') as f2:
+#            utils.test_print('test_join_constraints / open(csv2)', csv2)
+            i_row2 = 1
+            r2 = csv.reader(f2)
+            next(r2)
+            for row2 in r2:
+                i_row2 = i_row2 + 1
+                # Skip over blank rows, it's a killer
+                if ''.join(row2).strip() == '':
+                    continue
+                
+                # First: apply value constraints to row. if it doesn't pass that, no need to join
+                pass_value_constraints = test_value_constraints(table2, row2, value_constraints, query_where, attribute_dict)
+                if pass_value_constraints == True:
+                    # Then: compare join constraints between table1 and table 2
+                    constraint = 0
+                    constraints_list = []
+                    for i in join_constraints[table1, table2]:
+                        
+#                        utils.test_print('test_join_constraints / join_constraints', join_constraints)
+                        # found a pair of tables
+                        # next, find the rows that meet the join constraints
+                        
+                        # This is for handling multiple join constraints
+                        constraint = constraint + 1
+                        if constraint > 1:
+                            # A connector is a boolean operator like AND. Only relevant if there is more than
+                            # one value constraint for a single table. Append to constraints_list in 
+                            # even-numbered slot.
+                            constraints_list.append(query_where[i]['Connector'])
+        
+                        join_results[table2] = False
+                        ta1 = query_where[i]['Subject']
+                        a1 = utils.get_attribute_index(ta1, attribute_dict)
+                        subj = row1[a1]
+                        op = query_where[i]['Verb']
+                        ta2 = query_where[i]['Object']
+                        obj_index = utils.get_attribute_index(ta2, attribute_dict)
+            
+                        # Append result
+                        constraints_list.append(utils.eval_binary_comparison(subj, op, row2[obj_index]))
+#                        utils.test_print('test_join_constraints / constraints_list', constraints_list)
     
-    return result
+                    # 2 - Compare multiple join constraints on table 1, if there are any
+                    # only need to do extra processing if there are multiple WHERE conditions to combine, i.e., len >=2
+                    #TODO: need to do some grouping when doing an OR compare on the same attribute
+                    result = constraints_list[0]
+                    if len(constraints_list) >= 2:
+                        for i in range(len(constraints_list)):
+                            if i % 2 == 0 and i < len(constraints_list) - 2:
+                                a = result
+                                op = constraints_list[i + 1]
+                                b = constraints_list[i + 2]
+                                result = utils.eval_binary_comparison(a, op, b)
+
+                    if result == True:
+                        persistent_result = True
+                        append_join_pair(table1, i_row1, table2, i_row2)
+                        append_filtered_row(table2, row2, i_row2)
+
+        f2.closed
+    
+    return persistent_result
 
 def find_join_row(v1, a2, csv2):
     #TODO: no return value at the moment, perhaps should send something back to say yes/no found something
@@ -276,10 +405,10 @@ def find_join_row(v1, a2, csv2):
     return i_row2
     
 
-def append_join_pair(i, table1, i_row1, table2, i_row2):
+def append_join_pair(table1, i_row1, table2, i_row2):
     
     filedir = utils.get_table_directory()
-    filename = 'join_map_' + str(i) + '.csv'
+    filename = 'temp_join_' + table1 + '_' + table2 + '.csv'
     filepath = os.path.join(filedir, filename)
     
     writeline = [table1, i_row1, table2, i_row2]
@@ -287,3 +416,16 @@ def append_join_pair(i, table1, i_row1, table2, i_row2):
     with open(filepath, 'a', newline = '') as f:
         w = csv.writer(f)
         w.writerow(writeline)
+
+
+def append_filtered_row(table, row, i_row):
+    filepath = utils.get_filtered_table_fullpath(table)
+    
+    writeline = []
+    writeline.append(i_row)
+    writeline = writeline + row
+    
+    with open(filepath, 'a', newline = '') as f:
+        w = csv.writer(f)
+        w.writerow(writeline)
+    
