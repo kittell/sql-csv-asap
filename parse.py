@@ -61,21 +61,14 @@ def check_has_join(subject, object):
     
     return result
 
-def parse_query(query_input):
-    """PARSE_QUERY
-    DESCRIPTION: Parse a SQL query input by user into its components (SELECT, FROM,
-        WHERE, etc.) in a format that can be used as a query by the program.
-    INPUT: query_input: string containing the entire SQL query
-    OUTPUT: parsed_query: dict, with (key:value) as (SQL query components:values)
+def parse_query_into_candidates(query_input):
+    """PARSE_CANDIDATES
+    DESCRIPTION: 
+    INPUT: query_input: 
+    OUTPUT: query_candidates: 
     """
-
-    # Walk through query string
-    # Everything between SQL terms becomes a candidate component
-    #   e.g., substring between SELECT and FROM becomes SELECT query candidate
-    # Candidates are decomposed into individual components
-    
-    # TODO: extend this to ORDER BY, GROUP BY, etc.
-    query_terms_list = ['SELECT', 'FROM', 'WHERE']  # list of allowed query statements
+    # list of allowed query statements
+    query_terms_list = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'HAVING', 'ORDER BY']  
     
     # Determines whether term has been found in query. Initialize to False.
     found_terms = {}
@@ -111,6 +104,10 @@ def parse_query(query_input):
     query_candidates = {}
     for i in range(len(query_terms_list)):
         term = query_terms_list[i]
+        
+        # Add an empty string for all terms--missing terms may cause problems in query
+        query_candidates[term] = ''
+        
         if found_terms[term] == True:
             # Get the start and end position of each SQL statement value
             i_start = query_index[term] + len(term)
@@ -126,13 +123,59 @@ def parse_query(query_input):
                     i_end = len(query_input)
 
             query_candidates[term] = query_input[i_start:i_end]
-
-
+    
     # Print dict values to understand the intermediate calculations
-    utils.test_print('parse_query / query_terms_list', query_terms_list)
-    utils.test_print('parse_query / found_terms', found_terms)
-    utils.test_print('parse_query / query_index', query_index)
-    utils.test_print('parse_query / query_candidates', query_candidates)
+    utils.test_print('parse_candidates / query_terms_list', query_terms_list)
+    utils.test_print('parse_candidates / found_terms', found_terms)
+    utils.test_print('parse_candidates / query_index', query_index)
+    utils.test_print('parse_candidates / query_candidates', query_candidates)
+    
+    return query_candidates
+    
+def parse_query(query_input):
+    """PARSE_QUERY
+    DESCRIPTION: Parse a SQL query input by user into its components (SELECT, FROM,
+        WHERE, etc.) in a format that can be used as a query by the program.
+    INPUT: query_input: string containing the entire SQL query
+    OUTPUT: parsed_query: dict, with (key:value) as (SQL query components:values)
+    """
+
+    # Walk through query string
+    # Everything between SQL terms becomes a candidate for the preceding clause
+    #   e.g., substring between SELECT and FROM becomes SELECT query candidate
+    # Candidates are decomposed into individual components
+    # So, an example query might be parsed like this:
+    #   SELECT Name, Bib FROM BostonMarathon2017 WHERE (Country = KEN) AND (Gender = F)
+    #       ...is parsed into the following dict...
+    #   {
+    #       'SELECT': ['Name', 'Bib'],
+    #       'FROM': ['BostonMarathon2017'],
+    #       'WHERE': [
+    #           {
+    #               'Connector': ''
+    #               'Subject': 'Country'
+    #               'Verb': '='
+    #               'Object': 'KEN'
+    #               'Join': False
+    #           },
+    #           {
+    #               'Connector': 'AND'
+    #               'Subject': 'Gender'
+    #               'Verb': '='
+    #               'Object': 'F'
+    #               'Join': False
+    #           },
+    #       ]   
+    #   }
+    
+    # Break input query string into different clauses
+    # 'candidate' indicates that the entire substring following a SQL statement will
+    # be included, e.g., from the input SELECT Name, Bib FROM ..., the candidate SELECT
+    # clause will be 'Name, Bib'
+    # Further processing of candidates will parse out multiple statements
+    # from an individual candidate.
+    query_candidates = {}
+    query_candidates = parse_query_into_candidates(query_input)
 
     # parse_cmd helps to direct traffic for validating each SQL statement
     parse_cmd = {
@@ -141,165 +184,100 @@ def parse_query(query_input):
         'WHERE': parse_where
     }
 
-    # TODO: next, parse each candidate term into the final dict that will be returned from this method
     parsed_query = {}
-    for term in query_terms_list:
-        if found_terms[term] == True:
-            parsed_query[term] = parse_cmd[term](query_candidates[term])
-        else:
-            parsed_query[term] = ''
-    
-    # Further processing for SELECT statement
-    # If the user selected *, explicitly add all attributes
-    if parsed_query['SELECT'][0] == '*':
-        # Assumption: getting all values from just one table
-        csv_fullpath = utils.get_csv_fullpath(
-            utils.table_to_csv(
-                parsed_query['FROM'][0]
-            )
-        )
-        parsed_query['SELECT'] = utils.get_attribute_list(csv_fullpath)
-        utils.test_print('parse_query / parsed_query[SELECT]',parsed_query['SELECT'])
+    for term in query_candidates:
+        parsed_query[term] = ''
+        if query_candidates[term] != '':
+            parsed_query[term] = parse_cmd[term](query_candidates)
 
-    # convert all attributes in SELECT to be table.attr pairs
-    # TODO: this should be its own function -- out of time, doubling up for now
-    for i in range(len(parsed_query['SELECT'])):
-        # if it has a dot already, it's good to go
-        select_attr = parsed_query['SELECT'][i]
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
-            
-            found_attr_match = False
-            for table_name in parsed_query['FROM']:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        break
-
-                if found_attr_match == True:
-                    break
-            
-            parsed_query['SELECT'][i] = ta
-
-    # convert all attributes in WHERE to be table.attr pairs
-    # TODO: this should be its own function -- out of time, doubling up for now
-    for i in range(len(parsed_query['WHERE'])):
-        # if it has a dot already, it's good to go
-        select_attr = parsed_query['WHERE'][i]['Subject']
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
-            
-            found_attr_match = False
-            for table_name in parsed_query['FROM']:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        parsed_query['WHERE'][i]['Subject'] = ta
-                        break
-
-                if found_attr_match == True:
-                    break
-
-        
-        utils.test_print('parse_query / parsed_query[WHERE][i][Subject]',parsed_query['WHERE'][i]['Subject'])   
-
-    # convert all attributes in WHERE to be table.attr pairs
-    # TODO: this should be its own function -- out of time, doubling up for now
-    for i in range(len(parsed_query['WHERE'])):
-        # if it has a dot already, it's good to go
-        select_attr = parsed_query['WHERE'][i]['Object']
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in... if it is an attribute
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
-            
-            found_attr_match = False
-            for table_name in parsed_query['FROM']:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        parsed_query['WHERE'][i]['Object'] = ta
-                        break
-
-                if found_attr_match == True:
-                    break
-
-        
-        utils.test_print('parse_query / parsed_query[WHERE][i][Object]',parsed_query['WHERE'][i]['Object'])  
-    
-    utils.test_print('\nfinal parsed_query',parsed_query)
+    utils.test_print('parse_query / parsed_query', parsed_query)
     
     return parsed_query
 
 
-def parse_select(candidate):
-    """FUNCTION_NAME
+def parse_select(query_candidates):
+    """PARSE_SELECT
     DESCRIPTION: 
     INPUT: candidate SELECT clause of input SQL query
-    OUTPUT: parsed_list: list of individual components of SELECT clause
+    OUTPUT: parsed_select_list: list of individual components of SELECT clause
     """
-    
     # TODO: There should be validation to prove attributes exist
-    candidate = candidate.strip()   # Remove leading, trailing spaces
-    parsed_list = candidate.split(',')
-    # Remove leading, trailing spaces from individual terms
-    for i in range(len(parsed_list)):
-        parsed_list[i] = parsed_list[i].strip()
+    candidate = query_candidates['SELECT'].strip()   # Remove leading, trailing spaces
+    parsed_select_list = candidate.split(',')
     
-    return parsed_list
+    # Need a parsed FROM query to do this one.
+    # TODO: so that means we're parsing FROM twice. Combine it somehow.
+    parsed_from_list = parse_from(query_candidates)
+    
+    # Remove leading, trailing spaces from individual terms
+    for i in range(len(parsed_select_list)):
+        parsed_select_list[i] = parsed_select_list[i].strip()
+    
+    # If the user selected *, explicitly add all attributes
+    if parsed_select_list[0] == '*':
+        # Assumption: when SELECT is *, only receiving a single table in FROM statement,
+        #   i.e., don't need to parse FROM into individual components, there is only one
+        csv_fullpath = utils.get_csv_fullpath(
+            utils.table_to_csv(parsed_from_list[0])
+        )
+        parsed_select_list = utils.get_attribute_list(csv_fullpath)
+        utils.test_print('parse_select / parsed_select_list',parsed_select_list)
+    
+    # convert all attributes in SELECT to be table.attr pairs
+    # TODO: this should be its own function, b/c it's also used in WHERE statement
+    for i in range(len(parsed_select_list)):
+        # if it has a dot already, it's good to go
+        select_attr = parsed_select_list[i]
+        if '.' not in select_attr:
+            # ta is table.attr pair
+            ta = ''
+            attribute_list = []
+            # need to figure out what table each attribute is in
+            # Assumption: use the first one you find; user should do a better input if it doesn't work
+            
+            found_attr_match = False
+            for table_name in parsed_from_list:
+                csv_fullpath = utils.get_csv_fullpath(
+                    utils.table_to_csv(
+                        table_name
+                    )
+                )
+                attribute_list = utils.get_attribute_list(csv_fullpath)
+                for attr in attribute_list:
+                    if attr == select_attr:
+                        ta = table_name + '.' + attr
+                        found_attr_match = True
+                        break
 
-def parse_from(candidate):
-    """FUNCTION_NAME
+                if found_attr_match == True:
+                    break
+            
+            parsed_select_list[i] = ta
+            utils.test_print('parse_select / parsed_select_list[i]',parsed_select_list[i])
+    
+    return parsed_select_list
+
+def parse_from(query_candidates):
+    """PARSE_FROM
     DESCRIPTION: 
     INPUT: candidate FROM clause of input SQL query
-    OUTPUT: parsed_list: list of individual components of FROM clause
+    OUTPUT: parsed_from_list: list of individual components of FROM clause
     """
     
-    # TODO: There should be validation to prove tables exist
-    candidate = candidate.strip()   # Remove leading, trailing spaces
-    parsed_list = candidate.split(',')
+    # TODO: validation to prove tables exist
+    candidate = query_candidates['FROM'].strip()   # Remove leading, trailing spaces
+    parsed_from_list = candidate.split(',')
     # Remove leading, trailing spaces from individual terms
-    for i in range(len(parsed_list)):
-        parsed_list[i] = parsed_list[i].strip()
+    for i in range(len(parsed_from_list)):
+        parsed_from_list[i] = parsed_from_list[i].strip()
         
         # Just in case user typed table_name .csv for FROM, remove .csv , don't want it
-        if parsed_list[i].endswith('.csv'):
-            parsed_list[i] = parsed_list[i].replace('.csv', '')
+        if parsed_from_list[i].endswith('.csv'):
+            parsed_from_list[i] = parsed_from_list[i].replace('.csv', '')
         
-    return parsed_list
+    return parsed_from_list
 
-def parse_where(candidate):
+def parse_where(query_candidates):
     """PARSE_WHERE
     DESCRIPTION: 
     INPUT: candidate WHERE clause of input SQL query
@@ -315,9 +293,9 @@ def parse_where(candidate):
     #           x[WHERE]['Join'] = True
     #TODO: each WHERE currently requires a parenthetical statement; fix later
     
-    utils.test_print('parse_where / candidate', candidate)
+    utils.test_print('parse_where / query_candidates[WHERE]', query_candidates['WHERE'])
     
-    candidate = candidate.strip()   # Remove leading, trailing spaces
+    candidate = query_candidates['WHERE'].strip()   # Remove leading, trailing spaces
     # Walk through candidate string. Add each term between () as an item to list
     pre_parsed_list = []            # Splits the () components into list items
     parsed_connector_list = ['']    # no connector before the first term
@@ -409,5 +387,76 @@ def parse_where(candidate):
             }
         )
     utils.test_print('parse_where / final_parsed_list', final_parsed_list)
+    
+    # Need a parsed FROM query to do this one.
+    # TODO: so that means we're parsing FROM twice. Combine it somehow.
+    parsed_from_list = parse_from(query_candidates)
+    
+    # convert all attributes in WHERE to be table.attr pairs
+    # TODO: this should be its own function -- out of time, doubling up for now
+    for i in range(len(final_parsed_list)):
+        # if it has a dot already, it's good to go
+        select_attr = final_parsed_list[i]['Subject']
+        if '.' not in select_attr:
+            # ta is table.attr pair
+            ta = ''
+            attribute_list = []
+            # need to figure out what table each attribute is in
+            # Assumption: use the first one you find; user should do a better input if it doesn't work
+            
+            found_attr_match = False
+            for table_name in parsed_from_list:
+                csv_fullpath = utils.get_csv_fullpath(
+                    utils.table_to_csv(
+                        table_name
+                    )
+                )
+                attribute_list = utils.get_attribute_list(csv_fullpath)
+                for attr in attribute_list:
+                    if attr == select_attr:
+                        ta = table_name + '.' + attr
+                        found_attr_match = True
+                        final_parsed_list[i]['Subject'] = ta
+                        break
+
+                if found_attr_match == True:
+                    break
+
+        
+        utils.test_print('parse_query / final_parsed_list[i][Subject]',final_parsed_list[i]['Subject'])   
+
+    # convert all attributes in WHERE to be table.attr pairs
+    # TODO: this should be its own function -- out of time, doubling up for now
+    for i in range(len(final_parsed_list)):
+        # if it has a dot already, it's good to go
+        select_attr = final_parsed_list[i]['Object']
+        if '.' not in select_attr:
+            # ta is table.attr pair
+            ta = ''
+            attribute_list = []
+            # need to figure out what table each attribute is in... if it is an attribute
+            # Assumption: use the first one you find; user should do a better input if it doesn't work
+            
+            found_attr_match = False
+            for table_name in parsed_from_list:
+                csv_fullpath = utils.get_csv_fullpath(
+                    utils.table_to_csv(
+                        table_name
+                    )
+                )
+                attribute_list = utils.get_attribute_list(csv_fullpath)
+                for attr in attribute_list:
+                    if attr == select_attr:
+                        ta = table_name + '.' + attr
+                        found_attr_match = True
+                        final_parsed_list[i]['Object'] = ta
+                        break
+
+                if found_attr_match == True:
+                    break
+
+        
+        utils.test_print('parse_query / final_parsed_list[i][Object]',final_parsed_list[i]['Object'])  
+    
     
     return final_parsed_list

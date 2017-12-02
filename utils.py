@@ -1,17 +1,25 @@
 import os
+import os.path
 import csv
 import codecs
 import operator
 
 
-# Set TESTPRINT to True if you want to see intermediate calculations
-TESTPRINT = True
+# Set TESTMODE to True if you want to see intermediate calculations
+TESTMODE = True
+
+def get_testmode():
+    return TESTMODE
 
 def test_print(caption, term):
     # Print selected terms while testing
     # TODO: make the lists and dicts look better when printing
-    if TESTPRINT == True:
-        print(caption, ' : ', term)
+    if TESTMODE == True:
+        try:
+            print(caption, ' : ', term)
+        except UnicodeEncodeError:
+            term = term.encode('ascii', 'ignore')
+            print(caption, ' : ', term)
 
 def get_table_directory():
 	working_directory = os.getcwd()
@@ -21,6 +29,17 @@ def get_csv_fullpath(csv_filename):
     # TODO: protection for when a full path is sent to this function
     csv_fullpath = os.path.join(get_table_directory(), csv_filename)
     return csv_fullpath
+
+def get_filtered_table_fullpath(table):
+    table_directory = get_table_directory()
+    filtered_filename = 'temp_filtered_' + table + '.csv'
+    return os.path.join(table_directory, filtered_filename)
+
+def get_temp_join_fullpath(table1, table2):
+    table_directory = get_table_directory()
+    join_filename = 'temp_join_' + table1 + '_' + table2 + '.csv'
+    return os.path.join(table_directory, join_filename)
+    
 
 def get_attribute_list(csv_fullpath):
     """
@@ -33,6 +52,7 @@ def get_attribute_list(csv_fullpath):
         reader = csv.reader(f)
         attribute_list = next(reader)
     return attribute_list
+
 
 def get_attribute_dict(attribute_dict, csv_fullpath):
     new_attribute_list = get_attribute_list(csv_fullpath)
@@ -62,7 +82,7 @@ def table_to_csv(table_name):
     INPUT: table name (filename without extension)
     OUTPUT: filename (with extension)
     """
-    csv_filename = table_name + '.csv'
+    csv_filename = str(table_name) + '.csv'
     return csv_filename
 
 def table_to_csv_fullpath(table_name):
@@ -204,3 +224,29 @@ def combine_table_attribute_pair(t, a):
         result = t + '.'
     result = result + a
     return result
+
+def get_attribute_index(ta, attribute_dict):
+    if '.' in ta:
+        # protection against different kind of input
+        ta = parse_table_attribute_pair(ta)
+    table = ta[0]
+    attr = ta[1]
+    
+    result = None
+    
+    for i in range(len(attribute_dict[table])):
+        if attr == attribute_dict[table][i]:
+            result = i
+            break
+    
+    return result
+
+def remove_temp_files():
+    file_start_strings = ['temp_']
+    table_directory = get_table_directory()
+    file_list = os.listdir(table_directory)
+    for file in file_list:
+        for pattern in file_start_strings:
+            if os.path.basename(file).startswith(pattern) == True:
+                test_print('remove_temp_files / file', file)
+                os.remove(os.path.join(table_directory, file))
