@@ -264,7 +264,7 @@ def parse_from(query_candidates):
     OUTPUT: parsed_from_list: list of individual components of FROM clause
     """
     
-    # TODO: There should be validation to prove tables exist
+    # TODO: validation to prove tables exist
     candidate = query_candidates['FROM'].strip()   # Remove leading, trailing spaces
     parsed_from_list = candidate.split(',')
     # Remove leading, trailing spaces from individual terms

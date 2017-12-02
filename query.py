@@ -3,6 +3,32 @@ import csv
 import os
 import os.path
 
+def build_table_list(query):
+    """BUILD_TABLE_LIST
+    DESCRIPTION: List all the tables stated in the SELECT and WHERE clauses
+    INPUT: query: the parsed user query
+    OUTPUT: table_list: list containing names of all tables in query
+    """
+    table_list = []
+    # 1 - pull tables from WHERE
+    for i in range(len(query['WHERE'])):
+        ta1 = utils.parse_table_attribute_pair(query['WHERE'][i]['Subject'])
+        if ta1[0] not in table_list:
+            table_list.append(ta1[0])
+        
+        if query['WHERE'][i]['Join'] == True:
+            ta2 = utils.parse_table_attribute_pair(query['WHERE'][i]['Object'])
+            if ta2[0] not in table_list:
+                table_list.append(ta2[0])
+        
+    # 2 - pull tables from SELECT
+    for i in range(len(query['SELECT'])):
+        ta1 = utils.parse_table_attribute_pair(query['SELECT'][i])
+        if ta1[0] not in table_list:
+            table_list.append(ta1[0])
+        
+    return table_list
+
 def perform_query(query):
     """PERFORM_QUERY
     DESCRIPTION: This is where the query work starts. Take a parsed SQL query, apply it
@@ -22,50 +48,45 @@ def perform_query(query):
 
     final_select_results = []
     
-    # Get list of csv files from FROM query. These will be full paths to file.
-    csv_list = []
-    for table in query['FROM']:
-        csv_fullpath = utils.table_to_csv_fullpath(table)
-        csv_list.append(csv_fullpath)
-    
+    # Get list of tables from WHERE query.
+    table_list = build_table_list(query)
+    print(table_list)
+
     # Build attribute dict. Used to associate attribute names (row 1) with their data.
     attribute_dict = {}
-    for csv_fullpath in csv_list:
+    for table in table_list:
+        csv_fullpath = utils.table_to_csv_fullpath(table)
         attribute_dict = utils.get_attribute_dict(attribute_dict, csv_fullpath)
-    
-    #utils.test_print('perform_query / attribute_dict', attribute_dict)
-    
+        
     # Determine which WHERE clauses are joins or attribute constraints
     query_where = query['WHERE']
     join_constraints = map_join_constraints(query_where)
     value_constraints = map_value_constraints(query_where)
     
-    # Walk through joins first.
-    # For a pair of joins from table1 to table2, walk through table1 and find the
-    # matching row in table2. Apply attribute constraints to each side.
-    # Write the result to a temp file: join_map_[i].csv in the format;
-    # table1, row1, table2, row2.
-    
     # wipe temp files that may exist - b/c we're appending temp results, not overwriting
-    # TODO: this should also happen at the end, except in test conditions where you want to see int results
     utils.remove_temp_files()
     
-    # TODO: do it like this: for each joined pair:
-    #   For row1 in each table_a in value_constraints:
-    #       If row1 passes value_constraints[table_a]:
-    #           If there are any join_constraints including table_a-table_b
-    #               For row2 in each table_b:
-    #                   If row2 passes value_constraints[table_b]
-    
-    # TODO: be smart about joins: b/c you walk table2 so often, make sure it's the smaller table
-    
-    table_list = []
-    for table in query['FROM']:
-        table_list.append(table)
-    
+    # Case 1: no joins. Simply walk through single table, applying all value constraints
+    # Case 2: joins.
+        # - Walk through value constraints of first table, table1. For rows that pass, append the
+        #       row to a temp file: temp_filtered_table1.csv
+        # - Then, apply join_constraints that involve table1. For the row # that just
+        #       passed the value_constraints, walk through table2
+        #   * Apply any value_constraints to table2 rows. If the row passes its value_constraints,
+        #       apply the relevant join_constraints. If the row passes join_ and value_constraints:
+        #       - Append the join details (table1, #_row1, table2, #_row2) to a temp file:
+        #           temp_join_table1_table2.csv
+        #       - Append the values of row2 to a temp file: temp_filtered_table2.csv
+        # - After applying all constraints to all rows, gather the data from the temp files.
+        #   * Walk through the temp_join files, using table1, row1 to get the relevant 
+        #       information from the temp_filtered_table1.csv file, and the same with
+        #       table2, row2. Merge the information together into a single line and print it.
+        
     for table1 in table_list:
+    
         if len(join_constraints) == 0:
-            # CASE 1: no joins, just apply value_constraints to single table
+            # CASE 1: NO JOINS
+            # Just apply value_constraints to single table
             csv1 = utils.table_to_csv_fullpath(table1)
             with open(csv1, newline = '', encoding = 'utf-8') as f1:
                 utils.test_print('perform_query / open(csv1)', csv1)
@@ -75,24 +96,27 @@ def perform_query(query):
                 for row1 in r1:
                     i_row1 = i_row1 + 1
                     int_select_results = []
+                    
                     # Skip over blank rows
                     if ''.join(row1).strip() == '':
                         continue
+                    
                     # test row1 against value_constraints[table1]
                     pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
-                    if pass_value_constraints:
-                        #continue
+                    if pass_value_constraints == True:
                         append_filtered_row(table1, row1, i_row1)
                         int_select_results = project_row(int_select_results, row1, table1, query['SELECT'], attribute_dict)
                         print(int_select_results)
             f1.closed
+
         else:
-            # CASE 2: joins
+            # CASE 2: JOINS
+            # Test table against value_constraints
+            # Then test table against join_constraints. The join_constraints test will
+            #   also include value_constraint tests against the second table.
             for table_pair in join_constraints:
                 if table1 == table_pair[0]:
-                    table2 = table_pair[1]
                     csv1 = utils.table_to_csv_fullpath(table1)
-                    csv2 = utils.table_to_csv_fullpath(table2)
                     with open(csv1, newline = '', encoding = 'utf-8') as f1:
                         utils.test_print('perform_query / open(csv1)', csv1)
                         r1 = csv.reader(f1)
@@ -100,30 +124,28 @@ def perform_query(query):
                         next(r1)            # Assumption: first row is header. Skip it.
                         for row1 in r1:
                             i_row1 = i_row1 + 1
+
                             # Skip over blank rows
                             if ''.join(row1).strip() == '':
                                 continue
+
                             # test row1 against value_constraints[table1]
                             pass_value_constraints = test_value_constraints(table1, row1, value_constraints, query['WHERE'], attribute_dict)
                             if pass_value_constraints == True:
                                 pass_join_constraints = test_join_constraints(table1, row1, i_row1, join_constraints, query_where, attribute_dict, value_constraints)
                                 if pass_join_constraints == True:
                                     append_filtered_row(table1, row1, i_row1)
-#                                    print(row1) #TODO: printing is temporary
                     f1.closed
     
-    # Gather results
-    # G1: if joins exist, walk through those files first
-    # TODO: for now: assuming one join
+    # Further processing for case 2: gather results from temp files and combine them
     for table_pair in join_constraints:
         table1 = table_pair[0]
         table2 = table_pair[1]
         filtered_tables = {}
         filtered_tables[table1] = utils.get_filtered_table_fullpath(table1)
         filtered_tables[table2] = utils.get_filtered_table_fullpath(table2)
-        # Check if file exists: temp_join_table1_table2.csv
-        # TODO: if it exists:
-        temp_join_file = os.path.join(utils.get_table_directory(), 'temp_join_' + table1 + '_' + table2 + '.csv')
+
+        temp_join_file = utils.get_temp_join_fullpath(table1, table2)
         utils.test_print('perform_query / temp_join_file', temp_join_file)
         if os.path.exists(temp_join_file) == True:
             # open temp_join file
@@ -136,7 +158,7 @@ def perform_query(query):
                     int_select_results = []
                     for col in range(len(row_join)):
                         # Next: go to filtered_table files to retrieve data
-                        # Columns 0, 2, 4, etc. have tables; 1, 3, etc. have row numbers (i_filtered)
+                        # Columns 0, 2, 4, etc. have table namess; 1, 3, etc. have row numbers (i_filtered)
                         if col % 2 == 0:
                             if os.path.exists(filtered_tables[row_join[col]]):
                                 with open(filtered_tables[row_join[col]], newline = '', encoding = 'utf-8') as f_filtered:
@@ -149,15 +171,11 @@ def perform_query(query):
                                             # Note: leaving out first entry in row_filtered: it is
                                             # a row #, not part of results
                                             int_select_results = project_row(int_select_results, row_filtered[1:len(row_filtered)], table_filtered, query['SELECT'], attribute_dict)
-                                            break                            
+                                            break
+                                f_filtered.closed
                     
                     print(int_select_results)
-                    
-            # walk through temp_join
-                # open table1.csv
-                # open table2.csv
-                # get projected values from table1 based on col 1 (2nd col)
-                # get projected values from table2 based on col 3 (4th col)
+
             f_join.closed
     
     return final_select_results

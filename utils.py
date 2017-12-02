@@ -5,13 +5,16 @@ import codecs
 import operator
 
 
-# Set TESTPRINT to True if you want to see intermediate calculations
-TESTPRINT = True
+# Set TESTMODE to True if you want to see intermediate calculations
+TESTMODE = True
+
+def get_testmode():
+    return TESTMODE
 
 def test_print(caption, term):
     # Print selected terms while testing
     # TODO: make the lists and dicts look better when printing
-    if TESTPRINT == True:
+    if TESTMODE == True:
         try:
             print(caption, ' : ', term)
         except UnicodeEncodeError:
@@ -31,6 +34,12 @@ def get_filtered_table_fullpath(table):
     table_directory = get_table_directory()
     filtered_filename = 'temp_filtered_' + table + '.csv'
     return os.path.join(table_directory, filtered_filename)
+
+def get_temp_join_fullpath(table1, table2):
+    table_directory = get_table_directory()
+    join_filename = 'temp_join_' + table1 + '_' + table2 + '.csv'
+    return os.path.join(table_directory, join_filename)
+    
 
 def get_attribute_list(csv_fullpath):
     """

@@ -155,3 +155,7 @@ if __name__ == '__main__':
             keep_going = execute_user_command(user_command)
         except KeyError:
             print('Invalid command. Try again. Type "help" for a list of commands.')
+
+    # Remove temporary files
+    if utils.get_testmode() == False:
+        utils.remove_temp_files()
