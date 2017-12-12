@@ -1,8 +1,67 @@
-import utils
+from utils import *
 
-# CLASSES
+def get_sql_terms():
+    # List of SQL terms handled by program
+    return ['SELECT', 'FROM', 'WHERE']
 
-# METHODS
+
+def get_connector_list():
+    # List of connectors for WHERE terms
+    return ['AND', 'OR', 'NOT']
+    
+def get_verb_list():
+    # List of operators
+    # Order is kind of important - want NOT LIKE before LIKE
+    return ['NOT LIKE', 'LIKE', '=', '<>', '<', '<=', '>', '>=']
+
+def map_join_constraints(q):
+    """MAP_JOIN_CONSTRAINTS
+        DESCRIPTION: Maps WHERE clauses to joined table pairs
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: join_constraints: dict of list; key of dict is a tuple of (table1, table2);
+            value of dict is a list of index numbers from main WHERE query containing 
+            constraint relevant to this table-table pair
+            e.g., join_constraints[(table1, table2)] = 0
+                  join_constraints[(table2, table3)] = 1
+        DEPENDENCY: utils.parse_table_attribute_pair
+    """
+    join_constraints = {}
+    for i in range(len(q.WHERE)):
+        if q.WHERE[i]['Join'] == True:
+            ta1 = parse_table_attribute_pair(q.WHERE[i]['Subject'])
+            ta2 = parse_table_attribute_pair(q.WHERE[i]['Object'])
+            table_pair = (ta1[0], ta2[0])
+            if table_pair not in join_constraints:
+                # Create empty list for key not already in join_constraints
+                join_constraints[table_pair] = []
+            join_constraints[table_pair].append(i)
+    test_print('map_join_constraints / join_constraints', join_constraints)
+    return join_constraints
+
+
+def map_value_constraints(q):
+    """MAP_VALUE_CONSTRAINTS
+        DESCRIPTION: Maps WHERE clauses to value constraints
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: value_constraints: dict of lists; key of dict is the table that the list of
+            requirements applies to; value of dict is a list of index numbers from the main
+            WHERE query containing a constraint relevant to this table
+    """
+    value_constraints = {}
+    
+    for i in range(len(q.WHERE)):
+        if q.WHERE[i]['Join'] == False:
+            ta1 = parse_table_attribute_pair(q.WHERE[i]['Subject'])
+            table1 = ta1[0]      # just parsing to make code more understandable
+            if table1 not in value_constraints:
+                # Create empty list for key not already in value_constraints
+                value_constraints[table1] = []
+            value_constraints[table1].append(i)
+            
+    test_print('map_value_constraints / value_constraints', value_constraints)
+    return value_constraints
 
 def check_has_join(subject, object):
     """CHECK_HAS_JOIN
@@ -17,15 +76,10 @@ def check_has_join(subject, object):
     # query has a join in it if:
     #   1) both the subject and object of any WHERE term has a '.' in it; AND
     #   2) substrings on both sides of '.' of any WHERE term are strings (i.e., not numbers)
-    #   3) more than one table called in WHERE subject values (t1.attr, t2.attr)
-    
-    # TODO: This will find the . in a real number and say it's a join... fix that
-    #   Testing 2017-11-19: .split the string. Check that both sides are not numbers.
     
     result = False
     has_dot = False
     split_not_number = False
-    multi_table = False
     table_list = []
     
     # Test 1: Subject and Object have a dot
@@ -34,9 +88,7 @@ def check_has_join(subject, object):
         if '.' in object:
             has_dot = True
             split_not_number = True
-            
-            utils.test_print('check_has_join / has_dot', has_dot)
-            
+                        
             subject_split = subject.split('.')
             for j in subject_split:
                 if j.isnumeric() == True:
@@ -47,416 +99,346 @@ def check_has_join(subject, object):
                 if j.isnumeric() == True:
                     split_not_number = False
             
-            utils.test_print('check_has_join / split_not_number', split_not_number)
-            
-            # Test 3: more than one table in WHERE query
-            if subject_split[0] != object_split[0]:
-                multi_table = True
-            utils.test_print('check_has_join / multi_table', multi_table)
-    
-    if has_dot == True and split_not_number == True and multi_table == True:
+    if has_dot == True and split_not_number == True:
         result = True
     
-    utils.test_print('check_has_join / result', result)
-    
     return result
-
-def parse_query_into_candidates(query_input):
-    """PARSE_CANDIDATES
-    DESCRIPTION: 
-    INPUT: query_input: 
-    OUTPUT: query_candidates: 
+    
+    
+def find_query_substring(raw_query, this_term):
+    """FIND_QUERY_SUBSTRING
+    DESCRIPTION: Find the component of a SQL term for this_term, e.g., SELECT
+    INPUT: raw_query string input from user
+    OUTPUT: result: substring of SQL query corresponding to this_term
     """
-    # list of allowed query statements
-    query_terms_list = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'HAVING', 'ORDER BY']  
+    # find the substring between this_term and the next sql term in raw_query
+    # Split the whole raw_query into a list, separated by spaces
+    # Find the entry for this_term and next_term
+    # Reconstitute the substring from this_term to next_term - 1
     
-    # Determines whether term has been found in query. Initialize to False.
-    found_terms = {}
-    for term in query_terms_list:
-        found_terms[term] = False
-        # See if terms are in the query input
-        if (' ' + term + ' ') in query_input:
-            # the space is there so that you don't find the name of a table or
-            # attribute that happens to contain a query term
-            found_terms[term] = True
-
-    # ...but SELECT won't have a space in front of it, so set it anyway:
-    found_terms['SELECT'] = True
-
-    # Get starting string index for each term in string
-    query_index = {}
-    for term in query_terms_list:
-        # Query must start with SELECT:
-        if term == 'SELECT':
-            query_index[term] = 0
-        else:
-            if found_terms[term] == True:
-                for i in range(len(query_input)):
-                    # protect against reading past end of string:
-                    if len(query_input) - len(term) > 0:
-                        if query_input[i:i+len(term)] == term:
-                            # Found the term, grab index and break
-                            query_index[term] = i
-                            break
-
-    # "query_candidate" means that, e.g., the entire SELECT statement will be taken
-    # in one chunk. It will be broken down into individual components later
-    query_candidates = {}
-    for i in range(len(query_terms_list)):
-        term = query_terms_list[i]
-        
-        # Add an empty string for all terms--missing terms may cause problems in query
-        query_candidates[term] = ''
-        
-        if found_terms[term] == True:
-            # Get the start and end position of each SQL statement value
-            i_start = query_index[term] + len(term)
-            if i == len(query_terms_list) - 1:
-                # if it's the last term in the list: end of query_input string is
-                # the end of the term value
-                i_end = len(query_input)
-            else:
-                # otherwise, i_end is the character before the start of the next term
-                if found_terms[query_terms_list[i + 1]] == True:
-                    i_end = query_index[query_terms_list[i + 1]]
-                else:
-                    i_end = len(query_input)
-
-            query_candidates[term] = query_input[i_start:i_end]
+    broken_query = raw_query.split(' ')
+    term_list = get_sql_terms()
     
-    # Print dict values to understand the intermediate calculations
-    utils.test_print('parse_candidates / query_terms_list', query_terms_list)
-    utils.test_print('parse_candidates / found_terms', found_terms)
-    utils.test_print('parse_candidates / query_index', query_index)
-    utils.test_print('parse_candidates / query_candidates', query_candidates)
+    i_this = 0
+    i_next = 0
     
-    return query_candidates
+    # First: Find the index for this_term: i_this
+    found = False
+    for i in range(len(broken_query)):
+        if found == False:
+            if broken_query[i] == this_term:
+                i_this = i
+                found = True
+                break
     
-def parse_query(query_input):
-    """PARSE_QUERY
-    DESCRIPTION: Parse a SQL query input by user into its components (SELECT, FROM,
-        WHERE, etc.) in a format that can be used as a query by the program.
-    INPUT: query_input: string containing the entire SQL query
-    OUTPUT: parsed_query: dict, with (key:value) as (SQL query components:values)
-    """
-
-    # Walk through query string
-    # Everything between SQL terms becomes a candidate for the preceding clause
-    #   e.g., substring between SELECT and FROM becomes SELECT query candidate
-    # Candidates are decomposed into individual components
-    # So, an example query might be parsed like this:
-    #   SELECT Name, Bib FROM BostonMarathon2017 WHERE (Country = KEN) AND (Gender = F)
-    #       ...is parsed into the following dict...
-    #   {
-    #       'SELECT': ['Name', 'Bib'],
-    #       'FROM': ['BostonMarathon2017'],
-    #       'WHERE': [
-    #           {
-    #               'Connector': ''
-    #               'Subject': 'Country'
-    #               'Verb': '='
-    #               'Object': 'KEN'
-    #               'Join': False
-    #           },
-    #           {
-    #               'Connector': 'AND'
-    #               'Subject': 'Gender'
-    #               'Verb': '='
-    #               'Object': 'F'
-    #               'Join': False
-    #           },
-    #       ]   
-    #   }
+    # if term wasn't found, return empty string
+    if found == False:
+        return ''
     
-    # Break input query string into different clauses
-    # 'candidate' indicates that the entire substring following a SQL statement will
-    # be included, e.g., from the input SELECT Name, Bib FROM ..., the candidate SELECT
-    # clause will be 'Name, Bib'
-    # Further processing of candidates will parse out multiple statements
-    # from an individual candidate.
-    query_candidates = {}
-    query_candidates = parse_query_into_candidates(query_input)
-
-    # parse_cmd helps to direct traffic for validating each SQL statement
-    parse_cmd = {
-        'SELECT': parse_select,
-        'FROM': parse_from,
-        'WHERE': parse_where
-    }
-
-    parsed_query = {}
-    for term in query_candidates:
-        parsed_query[term] = ''
-        if query_candidates[term] != '':
-            parsed_query[term] = parse_cmd[term](query_candidates)
-
-    utils.test_print('parse_query / parsed_query', parsed_query)
-    
-    return parsed_query
-
-
-def parse_select(query_candidates):
-    """PARSE_SELECT
-    DESCRIPTION: 
-    INPUT: candidate SELECT clause of input SQL query
-    OUTPUT: parsed_select_list: list of individual components of SELECT clause
-    """
-    # TODO: There should be validation to prove attributes exist
-    candidate = query_candidates['SELECT'].strip()   # Remove leading, trailing spaces
-    parsed_select_list = candidate.split(',')
-    
-    # Need a parsed FROM query to do this one.
-    # TODO: so that means we're parsing FROM twice. Combine it somehow.
-    parsed_from_list = parse_from(query_candidates)
-    
-    # Remove leading, trailing spaces from individual terms
-    for i in range(len(parsed_select_list)):
-        parsed_select_list[i] = parsed_select_list[i].strip()
-    
-    # If the user selected *, explicitly add all attributes
-    if parsed_select_list[0] == '*':
-        # Assumption: when SELECT is *, only receiving a single table in FROM statement,
-        #   i.e., don't need to parse FROM into individual components, there is only one
-        csv_fullpath = utils.get_csv_fullpath(
-            utils.table_to_csv(parsed_from_list[0])
-        )
-        parsed_select_list = utils.get_attribute_list(csv_fullpath)
-        utils.test_print('parse_select / parsed_select_list',parsed_select_list)
-    
-    # convert all attributes in SELECT to be table.attr pairs
-    # TODO: this should be its own function, b/c it's also used in WHERE statement
-    for i in range(len(parsed_select_list)):
-        # if it has a dot already, it's good to go
-        select_attr = parsed_select_list[i]
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
-            
-            found_attr_match = False
-            for table_name in parsed_from_list:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        break
-
-                if found_attr_match == True:
+    # Next: Find index for next_term: i_next
+    i_next = len(broken_query) # default set to end in case it's last term in query
+    found = False
+    for i in range(i_this + 1, len(broken_query)):
+        if found == False:
+            for term in term_list:
+                if term == broken_query[i]:
+                    i_next = i
+                    found = True
                     break
-            
-            parsed_select_list[i] = ta
-            utils.test_print('parse_select / parsed_select_list[i]',parsed_select_list[i])
-    
-    return parsed_select_list
 
-def parse_from(query_candidates):
-    """PARSE_FROM
-    DESCRIPTION: 
-    INPUT: candidate FROM clause of input SQL query
-    OUTPUT: parsed_from_list: list of individual components of FROM clause
+    
+    # Reconstitute substring; go ahead and leave out the entry for the term
+    # i.e., don't return SELECT for the SELECT substring
+    result = ' '.join(broken_query[i_this + 1:i_next])
+    return result
+    
+def replace_table_alias(original_list, alias_dict):
+    """REPLACE_TABLE_ALIAS
+    DESCRIPTION: Replaces table alias with the table name
+    INPUT: 
+        - original list: list with table aliases
+        - alias_dict: map of alias:table
+    OUTPUT: replaced_list: original list values with aliases replaced with table names
     """
     
-    # TODO: validation to prove tables exist
-    candidate = query_candidates['FROM'].strip()   # Remove leading, trailing spaces
-    parsed_from_list = candidate.split(',')
-    # Remove leading, trailing spaces from individual terms
-    for i in range(len(parsed_from_list)):
-        parsed_from_list[i] = parsed_from_list[i].strip()
+    # TODO: Error if a problem with replacing alias
+    
+    replaced_list = []
+    for original in original_list:
+        found = False
+        for alias in alias_dict:
+            if original.startswith(alias + '.') == True:
+                # Replace the alias with the actual table name
+                temp = original.split('.')
+                replace = alias_dict[alias] + '.' + temp[1]
+                replaced_list.append(replace)
+                found = True
+                break
         
-        # Just in case user typed table_name .csv for FROM, remove .csv , don't want it
-        if parsed_from_list[i].endswith('.csv'):
-            parsed_from_list[i] = parsed_from_list[i].replace('.csv', '')
+        if found == False:
+            # not in alias_dict, probably wasn't aliased so add it directly
+            replaced_list.append(original)
+    
+    return replaced_list
+    
+def force_table_attr_pairs(input_list, table_list):
+    """FORCE_TABLE_ATTR_PAIRS
+    DESCRIPTION: For a given list, append table name to attributes
+    INPUT: 
+        - input_list: list of terms to modify
+        - table_list: list of tables available to append to attributes
+    OUTPUT: mod_list: modification of input_list - table names appended to attributes
+    """
+    
+    # Two cases to replace:
+    # 1) Replace in dict in list, as in WHERE clause
+    # 2) Replace in simple list, as in SELECT clause
+    
+    attribute_dict = get_attribute_dict2(table_list)
+    
+    # Loop through input_list
+    for i in range(len(input_list)):
+        if type(input_list[i]) is dict:
+            # Case 1: WHERE clause
+            # Loop through dict
+            for k in input_list[i]:
+                if '.' not in input_list[i][k]:
+                    # If there is a . in dict entry, assume that means it already has a table.attr pair
+                    # Loop through attribute_dict to find matching attribute
+                    for t in attribute_dict:
+                        for a in attribute_dict[t]:
+                            if input_list[i][k] == a:
+                                # Found matching attribute, append table_name
+                                input_list[i][k] = t + '.' + input_list[i][k]
+                                break
+        else:
+            # Other cases: just a list, as in SELECT
+            for t in attribute_dict:
+                for a in attribute_dict[t]:
+                    if input_list[i] == a:
+                        # Found matching attribute, append table_name
+                        input_list[i] = t + '.' + input_list[i]
+                        break
+    
+    return input_list
+    
+    
+def parse_select(raw_query, alias_dict={}):
+    """PARSE_SELECT
+    DESCRIPTION: Retrieve the SELECT component of a SQL query
+    INPUT: raw_query string input from user
+    OUTPUT: select_list: list of individual table.attributes to project in final results
+    """
+    select_substring = find_query_substring(raw_query, 'SELECT')
+    
+    select_list = []
+    
+    if '*' in select_substring:
+        # Special case: SELECT *
+        # Stuff all attributes from table into select_list
+        # Assumption: only one table involved - defined in FROM query
+        from_query = parse_from(raw_query)
+        table_name = from_query[0]
         
-    return parsed_from_list
+        # Get attribute list for this table
+        csv_fullpath = table_to_csv_fullpath(table_name)
+        select_list = get_attribute_list(csv_fullpath)
+        
+    else:
+        select_list = select_substring.split(',')
+    
+    # Get rid of extra spaces in list entries
+    for i in range(len(select_list)):
+        select_list[i] = select_list[i].strip()
+    
+    # Replace table alias with table names
+    if len(alias_dict) > 0:
+        select_list = replace_table_alias(select_list, alias_dict)
+    
+    # Final step: replace all attribute names with table.name
+    table_list = get_query_table_list(raw_query)
+    select_list = force_table_attr_pairs(select_list, table_list)
+    
+    return select_list
 
-def parse_where(query_candidates):
+def parse_from_with_alias(raw_query):
+    """PARSE_FROM_WITH_ALIAS
+    DESCRIPTION: Intermediate result for determing FROM query, returns partial FROM query
+        that still contains aliases, if applicable
+    INPUT: raw_query string input from user
+    OUTPUT: from_list: list of FROM terms with aliases
+    """
+    from_substring = find_query_substring(raw_query, 'FROM')
+    from_alias_list = from_substring.split(',')
+    
+    # Get rid of extra spaces in list entries
+    # Also: remove .csv from end of table names, if it exists
+    for i in range(len(from_alias_list)):
+        from_alias_list[i] = from_alias_list[i].strip()
+        if from_alias_list[i].endswith('.csv'):
+            from_alias_list[i] = from_alias_list[i][:-4]
+    
+    return from_alias_list
+
+    
+def parse_from(raw_query):
+    """PARSE_FROM
+    DESCRIPTION: Retrieve the SELECT component of a SQL query
+    INPUT: raw_query string input from user
+    OUTPUT: from_list: list of FROM terms (without aliases)
+    """
+    from_alias_list = parse_from_with_alias(raw_query)
+    from_list = []
+    
+    # Break each list entry by spaces - so 0 will be table (value), 1 will be alias (key)
+    for i in from_alias_list:
+        if ' ' in i:
+            # If there's a space, then there's an alias - get first part of Table ALIAS
+            from_alias = i.split(' ')
+            from_list.append(from_alias[0])
+        else:
+            # Otherwise there is no alias, just append the table
+            from_list.append(i)
+    
+    return from_list
+
+    
+def parse_where(raw_query, alias_dict={}):
     """PARSE_WHERE
-    DESCRIPTION: 
+    DESCRIPTION: Retrieve the WHERE component of a SQL query
     INPUT: candidate WHERE clause of input SQL query
     OUTPUT: parsed_list: list of individual components of WHERE clause
     """
     
     # WHERE is a list of dictionaries with components: connector, subject, verb, object
     # example: 
-    #           x[WHERE]['Connector'] = 'AND'
-    #           x[WHERE]['Subject'] = 'Name'
-    #           x[WHERE]['Verb'] = '='
-    #           x[WHERE]['Object'] = 'Bill'
-    #           x[WHERE]['Join'] = True
-    #TODO: each WHERE currently requires a parenthetical statement; fix later
+    #           q.WHERE[0]['Connector'] = 'AND'
+    #           q.WHERE[0]['Subject'] = 'Name'
+    #           q.WHERE[0]['Verb'] = '='
+    #           q.WHERE[0]['Object'] = 'Bill'
+    #           q.WHERE[0]['Join'] = True
     
-    utils.test_print('parse_where / query_candidates[WHERE]', query_candidates['WHERE'])
+    where_substring = find_query_substring(raw_query, 'WHERE')
     
-    candidate = query_candidates['WHERE'].strip()   # Remove leading, trailing spaces
-    # Walk through candidate string. Add each term between () as an item to list
-    pre_parsed_list = []            # Splits the () components into list items
-    parsed_connector_list = ['']    # no connector before the first term
+    # If there is no WHERE, return empty list
+    where_list = []
+    if where_substring == '':
+        return where_list
     
-    between_where_terms = False
-    for i in range(len(candidate)):
-        if candidate[i] == '(':
-            i_start = i
-            # add substring between where terms to connector list
-            if between_where_terms == True:
-                parsed_connector_list.append(candidate[i_end + 1:i_start])
-            between_where_terms = False
-        elif candidate[i] == ')':
-            i_end = i
-            pre_parsed_list.append(candidate[i_start + 1:i_end])
-            between_where_terms = True
+    initial_where_list = where_substring.split(' ')
     
-    utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
+    # Replace table alias with table names
+    initial_where_list = replace_table_alias(initial_where_list, alias_dict)
     
-    # Remove leading and trailing spaces, parentheses
-    remove_list = [' ', '(', ')']
-    for i in range(len(pre_parsed_list)):
-        for j in remove_list:
-            pre_parsed_list[i] = pre_parsed_list[i].strip(j)
-            parsed_connector_list[i] = parsed_connector_list[i].strip(j)
-    
-    # intermediate parsed list: int_parsed_list
-    # Separate each pre_parsed_list WHERE entry into subject/verb/object
-    # Start by finding the 'verb' - then add the things on the side to subject/object
-    
-    utils.test_print('parse_where / pre_parsed_list', pre_parsed_list)
-    
-    where_comparison_list = ['=', '<', '>', '<>', '<=', '>=']
-    int_parsed_list = []
-    for item in pre_parsed_list:
-        inner_int_parsed_list = []
-        for i in range(len(item)):
-            # First, handle LIKE operator
-            if 'LIKE' in item:
-                if i < (len(item) - 4):
-                    if item[i:i+4] == 'LIKE':
-                        i_end = i + 3
-                        
-                        if i > 3 and item[i-4:i-1] == 'NOT':
-                            i_start = i-4       # special case for NOT LIKE
-                        else:
-                            i_start = i
-                        
-                        verb = item[i_start:i_end + 1]
-                        break
-            elif item[i] in where_comparison_list:
-                i_start = i
-                # do a second search to see if this is part of a two-character comparison (e.g., <=)
-                if item[i:i+2] in where_comparison_list:
-                    i_end = i_start + 1
-                else:
-                    i_end = i_start
-                verb = item[i_start:i_end + 1]
-                break
-        subject = item[0:i_start]
-        object = item[i_end + 1:len(item)]
+    # Parse into individual dict terms for each individual WHERE clause
+    connector_list = get_connector_list()
+    verb_list = get_verb_list()
+    w = 0       # WHERE counter
+    first = True
+    for i in range(len(initial_where_list)):
+        # TODO: This sequence seems brittle -- i.e., will have problems if 
+        # user inputs aren't Just Right.
+
+        # For first term, there is no connector; initialize the whole dict
+        if w == 0 and first == True:
+            where_list.append({})
+            where_list[w]['Connector'] = ''
+            where_list[w]['Subject'] = ''
+            where_list[w]['Verb'] = ''
+            where_list[w]['Object'] = ''
+            first = False
         
-        join = check_has_join(subject, object)
-        
-        inner_int_parsed_list.append(subject)
-        inner_int_parsed_list.append(verb)
-        inner_int_parsed_list.append(object)
-        inner_int_parsed_list.append(join)
-        for i in range(len(inner_int_parsed_list)):
-            if type(inner_int_parsed_list[i]) is str:
-                # .strip() will fail on boolean 'Join'
-                inner_int_parsed_list[i] = inner_int_parsed_list[i].strip()   # Remove leading, trailing spaces
-        
-        int_parsed_list.append(inner_int_parsed_list)
-        
-        utils.test_print('parse_where / inner_int_parsed_list', inner_int_parsed_list)
-        
-    utils.test_print('parse_where / int_parsed_list', int_parsed_list)
-    
-    final_parsed_list = []
-    for i in range(len(int_parsed_list)):
-        final_parsed_list.append(
-            {
-                'Connector': parsed_connector_list[i],
-                'Subject': int_parsed_list[i][0],
-                'Verb': int_parsed_list[i][1],
-                'Object': int_parsed_list[i][2],
-                'Join': int_parsed_list[i][3]
-            }
-        )
-    utils.test_print('parse_where / final_parsed_list', final_parsed_list)
-    
-    # Need a parsed FROM query to do this one.
-    # TODO: so that means we're parsing FROM twice. Combine it somehow.
-    parsed_from_list = parse_from(query_candidates)
-    
-    # convert all attributes in WHERE to be table.attr pairs
-    # TODO: this should be its own function -- out of time, doubling up for now
-    for i in range(len(final_parsed_list)):
-        # if it has a dot already, it's good to go
-        select_attr = final_parsed_list[i]['Subject']
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
+        # Starting a new clause if there's a connector
+        if initial_where_list[i] in connector_list:
+            # Special case: NOT LIKE
+            if initial_where_list[i+1] == 'LIKE':
+                continue
+            else:
+                w = w + 1
+                where_list.append({})
+                where_list[w]['Connector'] = initial_where_list[i]
+                where_list[w]['Subject'] = ''
+                where_list[w]['Verb'] = ''
+                where_list[w]['Object'] = ''
+
+        elif where_list[w]['Subject'] == '':
+            where_list[w]['Subject'] = initial_where_list[i]
+        elif where_list[w]['Verb'] == '':
+            if initial_where_list[i] in verb_list:
+                where_list[w]['Verb'] = initial_where_list[i]
+
+                # Special case: NOT LIKE
+                if initial_where_list[i] == 'LIKE':
+                    if initial_where_list[i-1] == 'NOT':
+                        where_list[w]['Verb'] = 'NOT LIKE'
+
             
-            found_attr_match = False
-            for table_name in parsed_from_list:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        final_parsed_list[i]['Subject'] = ta
-                        break
+            # Special case: NOT LIKE
+            elif initial_where_list[i] == 'NOT':
+                # Add it on the next loop
+                continue
 
-                if found_attr_match == True:
-                    break
-
-        
-        utils.test_print('parse_query / final_parsed_list[i][Subject]',final_parsed_list[i]['Subject'])   
-
-    # convert all attributes in WHERE to be table.attr pairs
-    # TODO: this should be its own function -- out of time, doubling up for now
-    for i in range(len(final_parsed_list)):
-        # if it has a dot already, it's good to go
-        select_attr = final_parsed_list[i]['Object']
-        if '.' not in select_attr:
-            # ta is table.attr pair
-            ta = ''
-            attribute_list = []
-            # need to figure out what table each attribute is in... if it is an attribute
-            # Assumption: use the first one you find; user should do a better input if it doesn't work
+        else:
+            where_list[w]['Object'] = initial_where_list[i]
             
-            found_attr_match = False
-            for table_name in parsed_from_list:
-                csv_fullpath = utils.get_csv_fullpath(
-                    utils.table_to_csv(
-                        table_name
-                    )
-                )
-                attribute_list = utils.get_attribute_list(csv_fullpath)
-                for attr in attribute_list:
-                    if attr == select_attr:
-                        ta = table_name + '.' + attr
-                        found_attr_match = True
-                        final_parsed_list[i]['Object'] = ta
-                        break
-
-                if found_attr_match == True:
-                    break
-
+    # Replace all attribute names with table.attribute
+    table_list = get_query_table_list(raw_query)
+    where_list = force_table_attr_pairs(where_list, table_list)
+    
+    # Determine whether WHERE clauses are joins
+    for w in range(len(where_list)):
+        where_list[w]['Join'] = check_has_join(where_list[w]['Subject'], where_list[w]['Object'])
+    
+    return where_list
+    
+def parse_alias(raw_query):
+    """PARSE_ALIAS
+    DESCRIPTION: Build a dictionary of table aliases, used for translating in query terms
+    INPUT: raw_query string input from user
+    OUTPUT: alias_dict: key: alias; value, actual table name
+    """
+    alias_dict = {}
+    # get the intermediate from list that has the table and alias 
+    from_alias_list = parse_from_with_alias(raw_query)
+    
+    # Break each list entry by spaces - so 0 will be table (value), 1 will be alias (key)
+    for i in from_alias_list:
+        if ' ' in i:
+            # If there's a space, then there's an alias - get first part of Table ALIAS
+            from_alias = i.split(' ')
+            alias_dict[from_alias[1]] = from_alias[0]
+    
+    return alias_dict
+    
+class Query:
+    def __init__(self, user_input):
+        self.user_input = user_input
+        self.alias = parse_alias(self.user_input)
+        self.FROM = parse_from(self.user_input)
+        self.SELECT = parse_select(self.user_input, self.alias)
+        self.WHERE = parse_where(self.user_input, self.alias)
         
-        utils.test_print('parse_query / final_parsed_list[i][Object]',final_parsed_list[i]['Object'])  
+        self.query_table_list = get_query_table_list(self.user_input)
+        self.attribute_dict = get_attribute_dict2(self.query_table_list)
+
+        self.join_constraints = map_join_constraints(self)
+        self.value_constraints = map_value_constraints(self)
+        
+        self.show_parsed_query()
     
-    
-    return final_parsed_list
+    def show_parsed_query(self):
+        print('SELECT:', self.SELECT)
+        print('FROM:', self.FROM)
+        if self.WHERE != '':
+            print('WHERE:')
+            for i in range(len(self.WHERE)):
+                this_line = '    '
+                this_line = this_line + str(i) + ': '
+                if i > 0:
+                    this_line = this_line + self.WHERE[i]['Connector'] + ' '
+                this_line = this_line + self.WHERE[i]['Subject'] + ' '
+                this_line = this_line + self.WHERE[i]['Verb'] + ' '
+                this_line = this_line + self.WHERE[i]['Object']
+                if self.WHERE[i]['Join'] == True:
+                    this_line = this_line + ' (join)'
+                print(this_line)
