@@ -1,4 +1,5 @@
 from utils import *
+from index import *
 
 def get_sql_terms():
     # List of SQL terms handled by program
@@ -423,6 +424,9 @@ class Query:
 
         self.join_constraints = map_join_constraints(self)
         self.value_constraints = map_value_constraints(self)
+        
+        # List of available indexes for query
+        self.index_list = get_index_list_selected_tables(self.query_table_list)
         
         self.show_parsed_query()
     
