@@ -13,6 +13,96 @@ def get_verb_list():
     # List of operators
     # Order is kind of important - want NOT LIKE before LIKE
     return ['NOT LIKE', 'LIKE', '=', '<>', '<', '<=', '>', '>=']
+
+def map_join_constraints(q):
+    """MAP_JOIN_CONSTRAINTS
+        DESCRIPTION: Maps WHERE clauses to joined table pairs
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: join_constraints: dict of list; key of dict is a tuple of (table1, table2);
+            value of dict is a list of index numbers from main WHERE query containing 
+            constraint relevant to this table-table pair
+            e.g., join_constraints[(table1, table2)] = 0
+                  join_constraints[(table2, table3)] = 1
+        DEPENDENCY: utils.parse_table_attribute_pair
+    """
+    join_constraints = {}
+    for i in range(len(q.WHERE)):
+        if q.WHERE[i]['Join'] == True:
+            ta1 = parse_table_attribute_pair(q.WHERE[i]['Subject'])
+            ta2 = parse_table_attribute_pair(q.WHERE[i]['Object'])
+            table_pair = (ta1[0], ta2[0])
+            if table_pair not in join_constraints:
+                # Create empty list for key not already in join_constraints
+                join_constraints[table_pair] = []
+            join_constraints[table_pair].append(i)
+    test_print('map_join_constraints / join_constraints', join_constraints)
+    return join_constraints
+
+
+def map_value_constraints(q):
+    """MAP_VALUE_CONSTRAINTS
+        DESCRIPTION: Maps WHERE clauses to value constraints
+        INPUT:
+            - query_where: WHERE component of parsed SQL query
+        OUTPUT: value_constraints: dict of lists; key of dict is the table that the list of
+            requirements applies to; value of dict is a list of index numbers from the main
+            WHERE query containing a constraint relevant to this table
+    """
+    value_constraints = {}
+    
+    for i in range(len(q.WHERE)):
+        if q.WHERE[i]['Join'] == False:
+            ta1 = parse_table_attribute_pair(q.WHERE[i]['Subject'])
+            table1 = ta1[0]      # just parsing to make code more understandable
+            if table1 not in value_constraints:
+                # Create empty list for key not already in value_constraints
+                value_constraints[table1] = []
+            value_constraints[table1].append(i)
+            
+    test_print('map_value_constraints / value_constraints', value_constraints)
+    return value_constraints
+
+def check_has_join(subject, object):
+    """CHECK_HAS_JOIN
+    DESCRIPTION: Determine whether SQL query has join in WHERE conditions. Used as a
+        flag for separate query result processing.
+    INPUT: 
+        - subject of WHERE clause of SQL query
+        - object of WHERE clause of SQL query
+    OUTPUT: result: True if WHERE contains join; otherwise, False
+    """
+    
+    # query has a join in it if:
+    #   1) both the subject and object of any WHERE term has a '.' in it; AND
+    #   2) substrings on both sides of '.' of any WHERE term are strings (i.e., not numbers)
+    
+    result = False
+    has_dot = False
+    split_not_number = False
+    table_list = []
+    
+    # Test 1: Subject and Object have a dot
+    # Test 2: not numbers on both sides of dot
+    if '.' in subject:
+        if '.' in object:
+            has_dot = True
+            split_not_number = True
+                        
+            subject_split = subject.split('.')
+            for j in subject_split:
+                if j.isnumeric() == True:
+                    split_not_number = False
+            
+            object_split = object.split('.')
+            for j in object_split:
+                if j.isnumeric() == True:
+                    split_not_number = False
+            
+    if has_dot == True and split_not_number == True:
+        result = True
+    
+    return result
     
     
 def find_query_substring(raw_query, this_term):
@@ -70,6 +160,9 @@ def replace_table_alias(original_list, alias_dict):
         - alias_dict: map of alias:table
     OUTPUT: replaced_list: original list values with aliases replaced with table names
     """
+    
+    # TODO: Error if a problem with replacing alias
+    
     replaced_list = []
     for original in original_list:
         found = False
@@ -288,9 +381,13 @@ def parse_where(raw_query, alias_dict={}):
         else:
             where_list[w]['Object'] = initial_where_list[i]
             
-    # Final step: replace all attribute names with table.name
+    # Replace all attribute names with table.attribute
     table_list = get_query_table_list(raw_query)
     where_list = force_table_attr_pairs(where_list, table_list)
+    
+    # Determine whether WHERE clauses are joins
+    for w in range(len(where_list)):
+        where_list[w]['Join'] = check_has_join(where_list[w]['Subject'], where_list[w]['Object'])
     
     return where_list
     
@@ -323,6 +420,11 @@ class Query:
         
         self.query_table_list = get_query_table_list(self.user_input)
         self.attribute_dict = get_attribute_dict2(self.query_table_list)
+
+        self.join_constraints = map_join_constraints(self)
+        self.value_constraints = map_value_constraints(self)
+        
+        self.show_parsed_query()
     
     def show_parsed_query(self):
         print('SELECT:', self.SELECT)
@@ -337,4 +439,6 @@ class Query:
                 this_line = this_line + self.WHERE[i]['Subject'] + ' '
                 this_line = this_line + self.WHERE[i]['Verb'] + ' '
                 this_line = this_line + self.WHERE[i]['Object']
+                if self.WHERE[i]['Join'] == True:
+                    this_line = this_line + ' (join)'
                 print(this_line)

@@ -1,7 +1,7 @@
 import os
 import csv
-import parse
-import query
+from parse import *
+from query import *
 from utils import *
 import time
 
@@ -89,7 +89,7 @@ def cmd_quit():
 
 
 def cmd_query():
-    # Collect a SQL query from the user. Parse it into components. Perform the query.
+    # Collect a SQL query from the user. Parse it into components. Perform the 
     
     # TODO: validation: must have SELECT and WHERE
         
@@ -102,9 +102,9 @@ def cmd_query():
         # START TIMER - after receiving user query
         start_time = time.time()
         
-        # Parse query. Perform query. Display results.
-        parsed_query = parse.parse_query(user_query)
-        query_result_list = query.perform_query(parsed_query)
+        # Parse  Perform  Display results.
+        input_query = Query(user_query)
+        query_result_list = perform_query(input_query)
         display_query_result(query_result_list)
     
         # END TIMER - after displaying query
