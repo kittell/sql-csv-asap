@@ -2,7 +2,7 @@ import os
 import csv
 import parse
 import query
-import utils
+from utils import *
 import time
 
 def get_user_query():
@@ -105,7 +105,7 @@ def cmd_query():
         # Parse query. Perform query. Display results.
         parsed_query = parse.parse_query(user_query)
         query_result_list = query.perform_query(parsed_query)
-        utils.display_query_result(query_result_list)
+        display_query_result(query_result_list)
     
         # END TIMER - after displaying query
         print("--- %s seconds ---" % (time.time() - start_time))
@@ -115,12 +115,11 @@ def cmd_query():
 
 def cmd_show_tables():
     # show list of .csv files in /tables, one per line
-
-    csv_list = utils.get_csv_list()
+    
+    table_list = get_table_list()
     print('\nList of available tables:')
-    for entry in csv_list:
-        table_name = utils.csv_to_table(entry)
-        print('*', table_name)
+    for table_name in table_list:
+        print('  *', table_name)
 
     return True
 
@@ -129,9 +128,9 @@ def cmd_show_attributes(table_name):
     # For a given table, show a list of its attributes
     
     csv_filename = table_name + '.csv'
-    csv_fullpath = os.path.join(utils.get_table_directory(), csv_filename)
+    csv_fullpath = os.path.join(get_table_directory(), csv_filename)
 
-    attribute_list = utils.get_attribute_list(csv_fullpath)
+    attribute_list = get_attribute_list(csv_fullpath)
 
     print('\nAttributes in', table_name)
     for attribute in attribute_list:
@@ -157,5 +156,5 @@ if __name__ == '__main__':
             print('Invalid command. Try again. Type "help" for a list of commands.')
 
     # Remove temporary files
-    if utils.get_testmode() == False:
-        utils.remove_temp_files()
+    if get_testmode() == False:
+        remove_temp_files()
