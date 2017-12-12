@@ -180,9 +180,9 @@ def get_comparison_function(c):
     # operator library: https://docs.python.org/3/library/operator.html
     return {
             '=': operator.eq,
+            '<>': operator.ne,
             '<': operator.lt,
             '<=': operator.le,
-            '<>': operator.ne,
             '>': operator.gt,
             '>=': operator.ge,
             'AND': operator.and_,
