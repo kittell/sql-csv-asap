@@ -55,7 +55,6 @@ def find_query_substring(raw_query, this_term):
                     i_next = i
                     found = True
                     break
-    
 
     
     # Reconstitute substring; go ahead and leave out the entry for the term
@@ -89,6 +88,48 @@ def replace_table_alias(original_list, alias_dict):
     
     return replaced_list
     
+def force_table_attr_pairs(input_list, table_list):
+    """FORCE_TABLE_ATTR_PAIRS
+    DESCRIPTION: For a given list, append table name to attributes
+    INPUT: 
+        - input_list: list of terms to modify
+        - table_list: list of tables available to append to attributes
+    OUTPUT: mod_list: modification of input_list - table names appended to attributes
+    """
+    
+    # Two cases to replace:
+    # 1) Replace in dict in list, as in WHERE clause
+    # 2) Replace in simple list, as in SELECT clause
+    
+    attribute_dict = get_attribute_dict2(table_list)
+    
+    # Loop through input_list
+    for i in range(len(input_list)):
+        if type(input_list[i]) is dict:
+            # Case 1: WHERE clause
+            # Loop through dict
+            for k in input_list[i]:
+                if '.' not in input_list[i][k]:
+                    # If there is a . in dict entry, assume that means it already has a table.attr pair
+                    # Loop through attribute_dict to find matching attribute
+                    for t in attribute_dict:
+                        for a in attribute_dict[t]:
+                            if input_list[i][k] == a:
+                                # Found matching attribute, append table_name
+                                input_list[i][k] = t + '.' + input_list[i][k]
+                                break
+        else:
+            # Other cases: just a list, as in SELECT
+            for t in attribute_dict:
+                for a in attribute_dict[t]:
+                    if input_list[i] == a:
+                        # Found matching attribute, append table_name
+                        input_list[i] = t + '.' + input_list[i]
+                        break
+    
+    return input_list
+    
+    
 def parse_select(raw_query, alias_dict={}):
     """PARSE_SELECT
     DESCRIPTION: Retrieve the SELECT component of a SQL query
@@ -102,7 +143,14 @@ def parse_select(raw_query, alias_dict={}):
     if '*' in select_substring:
         # Special case: SELECT *
         # Stuff all attributes from table into select_list
-        pass
+        # Assumption: only one table involved - defined in FROM query
+        from_query = parse_from(raw_query)
+        table_name = from_query[0]
+        
+        # Get attribute list for this table
+        csv_fullpath = table_to_csv_fullpath(table_name)
+        select_list = get_attribute_list(csv_fullpath)
+        
     else:
         select_list = select_substring.split(',')
     
@@ -111,12 +159,12 @@ def parse_select(raw_query, alias_dict={}):
         select_list[i] = select_list[i].strip()
     
     # Replace table alias with table names
-    select_list = replace_table_alias(select_list, alias_dict)
+    if len(alias_dict) > 0:
+        select_list = replace_table_alias(select_list, alias_dict)
     
     # Final step: replace all attribute names with table.name
-    # TODO: include replacement of aliases
-    for i in select_list:
-        continue
+    table_list = get_query_table_list(raw_query)
+    select_list = force_table_attr_pairs(select_list, table_list)
     
     return select_list
 
@@ -131,8 +179,11 @@ def parse_from_with_alias(raw_query):
     from_alias_list = from_substring.split(',')
     
     # Get rid of extra spaces in list entries
+    # Also: remove .csv from end of table names, if it exists
     for i in range(len(from_alias_list)):
         from_alias_list[i] = from_alias_list[i].strip()
+        if from_alias_list[i].endswith('.csv'):
+            from_alias_list[i] = from_alias_list[i][:-4]
     
     return from_alias_list
 
@@ -238,9 +289,8 @@ def parse_where(raw_query, alias_dict={}):
             where_list[w]['Object'] = initial_where_list[i]
             
     # Final step: replace all attribute names with table.name
-    # TODO: include replacement of aliases
-    for i in where_list:
-        continue
+    table_list = get_query_table_list(raw_query)
+    where_list = force_table_attr_pairs(where_list, table_list)
     
     return where_list
     
@@ -270,8 +320,9 @@ class Query:
         self.FROM = parse_from(self.user_input)
         self.SELECT = parse_select(self.user_input, self.alias)
         self.WHERE = parse_where(self.user_input, self.alias)
-
-        self.attribute_dict = {}
+        
+        self.query_table_list = get_query_table_list(self.user_input)
+        self.attribute_dict = get_attribute_dict2(self.query_table_list)
     
     def show_parsed_query(self):
         print('SELECT:', self.SELECT)
