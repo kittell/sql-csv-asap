@@ -6,6 +6,8 @@ import operator
 import string
 
 # Set TESTMODE to True if you want to see intermediate calculations
+"""DEBUGGING METHODS
+"""
 TESTMODE = True
 
 def get_testmode():
@@ -21,9 +23,36 @@ def test_print(caption, term):
             term = term.encode('ascii', 'ignore')
             print(caption, ' : ', term)
 
+
+"""DIRECTORY AND FILENAME METHODS
+"""
+
+working_directory = os.getcwd()
+
 def get_table_directory():
-	working_directory = os.getcwd()
-	return os.path.join(working_directory, 'tables')
+    table_directory = os.path.join(working_directory, 'tables')
+    
+    # If table_directory doesn't exist, create it
+    if os.path.isdir(table_directory) == False:
+        os.mkdir(table_directory)
+    
+    return table_directory
+
+def get_index_directory(table_name=''):
+    index_directory = os.path.join(working_directory, 'indexes')
+
+    # If index_directory doesn't exist, create it
+    if os.path.isdir(index_directory) == False:
+        os.mkdir(index_directory)
+    
+    # Make a dir one level down if table_name != ''
+    if table_name != '':
+        index_directory = os.path.join(index_directory, table_name)
+        if os.path.isdir(index_directory) == False:
+            os.mkdir(index_directory)
+    
+    return index_directory
+    
 
 def get_csv_fullpath(csv_filename):
     # TODO: protection for when a full path is sent to this function
@@ -48,6 +77,11 @@ def get_attribute_list(csv_fullpath):
     INPUT: csv_fullpath: full path and filename for target .csv file
     OUTPUT: attribute_list: list containing names of attributes (strings)
     """
+    # First: protect against receiving table_name instead of csv_fullpath...
+    if '.csv' not in csv_fullpath:
+        # Just assume it was a table_name; if not, better luck next time
+        csv_fullpath = table_to_csv_fullpath(csv_fullpath)
+    
     with open(csv_fullpath, newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         attribute_list = next(reader)
@@ -283,8 +317,9 @@ def combine_table_attribute_pair(t, a):
 
 def get_attribute_index(ta, attribute_dict):
     if '.' in ta:
-        # protection against different kind of input
+        # Case: ta = table.attribute pair - split it out
         ta = parse_table_attribute_pair(ta)
+    
     table = ta[0]
     attr = ta[1]
     
