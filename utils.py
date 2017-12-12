@@ -3,7 +3,7 @@ import os.path
 import csv
 import codecs
 import operator
-
+import string
 
 # Set TESTMODE to True if you want to see intermediate calculations
 TESTMODE = True
@@ -63,6 +63,18 @@ def get_attribute_dict(attribute_dict, csv_fullpath):
     
     return attribute_dict
 	
+def get_attribute_dict2(table_list):
+    # Loop through table list
+    # Build attribute_list for each table
+    attribute_dict = {}
+    for table_name in table_list:
+        csv_fullpath = table_to_csv_fullpath(table_name)
+        attribute_dict[table_name] = get_attribute_list(csv_fullpath)
+    
+    # Return attribute_list for each table
+    
+    return attribute_dict
+	
 def csv_to_table(csv_filename):
     """
     DESCRIPTION: Remove file extension from .csv files
@@ -97,7 +109,7 @@ def csv_fullpath_to_table(csv_fullpath):
     return table_name
 
 def get_csv_list():
-    """
+    """GET_CSV_LIST
     DESCRIPTION: Get the list of .csv files from the \tables directory. These
         are the tables that can be queried by the program.
     INPUT: none
@@ -108,6 +120,50 @@ def get_csv_list():
 
     csv_list = [f for f in os.listdir(get_table_directory()) if f.endswith('.csv')]
     return csv_list
+    
+def get_table_list():
+    """GET_TABLE_LIST
+    DESCRIPTION: Like get_csv_list but return table_names instead of filenames
+    INPUT: none
+    OUTPUT: table_list: list of filenames only of .csv files in \tables
+    """
+    # method for getting list of files for a directory comes from:
+    # https://stackoverflow.com/a/41447012/752784
+    
+    table_list = []
+    csv_list = get_csv_list()
+    for c in csv_list:
+        # Remove last four char, i.e., .csv
+        table_list.append(c[:-4])
+    return table_list
+
+def get_query_table_list(raw_query):
+    """GET_QUERY_TABLE_LIST
+    DESCRIPTION: Get a list of tables called out in a query. Don't confuse with building
+        a list of tables available to query (i.e., in /tables folder)
+    INPUT: raw_query string input from user
+    OUTPUT: query_table_list: list of tables called out in query
+    DEPENDENCY: string.punctuation
+    """
+    query_table_list = []
+    full_table_list = get_table_list()
+
+    # Remove punctuation from string
+    # https://stackoverflow.com/a/34294398/752784    
+    translator = str.maketrans('', '', string.punctuation)
+    raw_query = raw_query.translate(translator)
+
+    # Break raw query up so it's just a list of terms        
+    broken_query = raw_query.split(' ')
+    
+    # Loop over broken_query, finding terms that match full_table_list
+    for term in broken_query:
+        for table_name in full_table_list:
+            if term == table_name:
+                query_table_list.append(table_name)
+                break
+    
+    return query_table_list
 
 def display_query_result(result_list):
     print('\n***RESULTS***')
