@@ -27,32 +27,21 @@ def test_print(caption, term):
 """DIRECTORY AND FILENAME METHODS
 """
 
-working_directory = os.getcwd()
+def get_directory(name):
+    working_directory = os.getcwd()
+    dir = os.path.join(working_directory, name)
+    
+    # If directory doesn't exist, create it
+    if os.path.isdir(dir) == False:
+        os.mkdir(dir)
+    
+    return dir
 
 def get_table_directory():
-    table_directory = os.path.join(working_directory, 'tables')
-    
-    # If table_directory doesn't exist, create it
-    if os.path.isdir(table_directory) == False:
-        os.mkdir(table_directory)
-    
-    return table_directory
+    return get_directory('tables')
 
-def get_index_directory(table_name=''):
-    index_directory = os.path.join(working_directory, 'indexes')
-
-    # If index_directory doesn't exist, create it
-    if os.path.isdir(index_directory) == False:
-        os.mkdir(index_directory)
-    
-    # Make a dir one level down if table_name != ''
-    if table_name != '':
-        index_directory = os.path.join(index_directory, table_name)
-        if os.path.isdir(index_directory) == False:
-            os.mkdir(index_directory)
-    
-    return index_directory
-    
+def get_temp_directory():
+    return get_directory('temp')
 
 def get_csv_fullpath(csv_filename):
     # TODO: protection for when a full path is sent to this function
@@ -60,14 +49,14 @@ def get_csv_fullpath(csv_filename):
     return csv_fullpath
 
 def get_filtered_table_fullpath(table):
-    table_directory = get_table_directory()
-    filtered_filename = 'temp_filtered_' + table + '.csv'
-    return os.path.join(table_directory, filtered_filename)
+    dir = get_temp_directory()
+    filtered_filename = 'temp_filtered__' + table + '.csv'
+    return os.path.join(dir, filtered_filename)
 
 def get_temp_join_fullpath(table1, table2):
-    table_directory = get_table_directory()
-    join_filename = 'temp_join_' + table1 + '_' + table2 + '.csv'
-    return os.path.join(table_directory, join_filename)
+    dir = get_temp_directory()
+    join_filename = 'temp_join__' + table1 + '__' + table2 + '.csv'
+    return os.path.join(dir, join_filename)
     
 
 def get_attribute_list(csv_fullpath):
@@ -183,8 +172,10 @@ def get_query_table_list(raw_query):
     full_table_list = get_table_list()
 
     # Remove punctuation from string
-    # https://stackoverflow.com/a/34294398/752784    
-    translator = str.maketrans('', '', string.punctuation)
+    # https://stackoverflow.com/a/34294398/752784
+    # remove_this is string.punctuation, minus the -
+    remove_this = '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
+    translator = str.maketrans('', '', remove_this)
     raw_query = raw_query.translate(translator)
 
     # Break raw query up so it's just a list of terms        
@@ -259,29 +250,6 @@ def sql_like(a, b):
     
     return result
 
-def get_comparison_function(c):
-    """GET_COMPARISON_FUNCTION
-    DESCRIPTION: Convert a given comparison operator 
-    INPUT: 
-    OUTPUT: 
-    """
-    
-    # inspiration: https://stackoverflow.com/a/1740759/752784
-    # operator library: https://docs.python.org/3/library/operator.html
-    return {
-            '=': operator.eq,
-            '<>': operator.ne,
-            '<': operator.lt,
-            '<=': operator.le,
-            '>': operator.gt,
-            '>=': operator.ge,
-            'AND': operator.and_,
-            'OR': operator.or_,
-            'NOT': operator.not_,
-            'LIKE': sql_like,
-            'NOT LIKE': sql_not_like
-        }[c]
-
         
 def eval_binary_comparison(a, op, b):
     """FUNCTION_NAME
@@ -289,8 +257,33 @@ def eval_binary_comparison(a, op, b):
     INPUT: 
     OUTPUT: 
     """
+    # inspiration: https://stackoverflow.com/a/1740759/752784
+    # operator library: https://docs.python.org/3/library/operator.html
     
-    return get_comparison_function(op)(a, b)
+    ops = {
+        '=': operator.eq,
+        '<>': operator.ne,
+        '<': operator.lt,
+        '<=': operator.le,
+        '>': operator.gt,
+        '>=': operator.ge,
+        'AND': operator.and_,
+        'OR': operator.or_,
+        'NOT': operator.not_,
+        'LIKE': sql_like,
+        'NOT LIKE': sql_not_like
+    }
+    
+    # Convert a and b to numbers, if possible
+    # TODO: why doesn't this work with float(a)?
+    try:
+        a = int(a)
+        b = int(b)
+    except:
+        pass
+    
+    result = ops[op](a, b)
+    return result
 
 
 def parse_table_attribute_pair(ta):
@@ -333,11 +326,10 @@ def get_attribute_index(ta, attribute_dict):
     return result
 
 def remove_temp_files():
-    file_start_strings = ['temp_']
-    table_directory = get_table_directory()
-    file_list = os.listdir(table_directory)
+    # Cleanup: remove files from /temp folder
+    dir = get_temp_directory()
+    file_list = os.listdir(dir)
     for file in file_list:
-        for pattern in file_start_strings:
-            if os.path.basename(file).startswith(pattern) == True:
-                test_print('remove_temp_files / file', file)
-                os.remove(os.path.join(table_directory, file))
+        if os.path.isfile(os.path.join(dir, file)) == True:
+            test_print('remove_temp_files / file', file)
+            os.remove(os.path.join(dir, file))
