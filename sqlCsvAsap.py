@@ -167,10 +167,13 @@ if __name__ == '__main__':
     keep_going = True
     while keep_going == True:
         user_command = get_user_command()
-        try:
-            keep_going = execute_user_command(user_command)
-        except KeyError:
-            print('Invalid command. Try again. Type "help" for a list of commands.')
+#        try:
+#            keep_going = execute_user_command(user_command)
+#        except KeyError:
+#            print('Invalid command. Try again. Type "help" for a list of commands.')
+
+# TODO: commenting out above because the KeyError is masking some problems...
+        keep_going = execute_user_command(user_command)
 
     # Remove temporary files
     if get_testmode() == False:
