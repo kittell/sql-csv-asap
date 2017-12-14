@@ -49,6 +49,7 @@ def map_value_constraints(q):
         OUTPUT: value_constraints: dict of lists; key of dict is the table that the list of
             requirements applies to; value of dict is a list of index numbers from the main
             WHERE query containing a constraint relevant to this table
+            e.g., value_constraints[table1] = 0
     """
     value_constraints = {}
     
@@ -380,7 +381,13 @@ def parse_where(raw_query, alias_dict={}):
                 continue
 
         else:
-            where_list[w]['Object'] = initial_where_list[i]
+            # append on object term -- possible to search for string split by spaces
+            # problem is the .split(' ') above would put it in two different list entries
+            # which would overwrite here if you don't append
+            if where_list[w]['Object'] == '':
+                where_list[w]['Object'] = initial_where_list[i]
+            else:
+                where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
             
     # Replace all attribute names with table.attribute
     table_list = get_query_table_list(raw_query)
@@ -426,7 +433,7 @@ class Query:
         self.value_constraints = map_value_constraints(self)
         
         # List of available indexes for query
-        self.index_list = get_index_list_selected_tables(self.query_table_list)
+        self.index_list = get_query_index_list(self.query_table_list)
         
         self.show_parsed_query()
     
