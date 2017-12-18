@@ -305,6 +305,8 @@ def combine_table_attribute_pair(t, a):
     return result
 
 def get_attribute_index(ta, attribute_dict):
+    # Default input: table_attr_split [t, a]
+    
     if '.' in ta:
         # Case: ta = table.attribute pair - split it out
         ta = parse_table_attribute_pair(ta)
