@@ -4,8 +4,13 @@ import csv
 
 
 def get_index_directory(table_name=''):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     working_directory = os.getcwd()
-    index_directory = os.path.join(working_directory, 'indexes')
+    index_directory = os.path.join(working_directory, 'index')
 
     # If index_directory doesn't exist, create it
     if os.path.isdir(index_directory) == False:
@@ -20,47 +25,51 @@ def get_index_directory(table_name=''):
     return index_directory
 
 
-def get_index_command():
-    print()
-    print('show                               - Show all existing indexes')
-    print('show index TABLE                   - Show all indexes for table')
-    print('create index TABLE keyword KEYWORD - Create a new keyword index')
-    print('delete index TABLE                 - Deletes all indexes on table')
-    print()
-    
-    index_command = input('index > ')
-    # TODO: validation of input?
-    
-    return index_command
-
 def is_index_file(f):
+    """IS_INDEX_FILE
+        DESCRIPTION: Test whether target file is an index file
+        INPUT: string f: fullpath of a file
+        OUTPUT: boolean result: true if file is an index file; otherwise, false
+    """
     result = False
-    if os.path.isfile(f) == True:
-        if 'index-' in f:
-            result = True
-    
+    if 'index-' in f:
+        result = True
     return result
 
-def get_table_attribute_from_index_filename(index_file):
+def parse_index_filename(index_file):
+    """PARSE_INDEX_FILENAME
+        DESCRIPTION: An index filename contains information about which table-attribute
+            it is indexing, as well as which type of index is being used. Extract this
+            information when scanning index files.
+        INPUT: string index_file: filename or fullpath of a file
+        OUTPUT: list index_file_parts: [table_name, index_type, attr_name]
+    """
     # Break it down.
     # The format is: TABLENAME__index-TYPE-ATTRIBUTE.txt
+    index_file_parts = []
     
-    # First: strip off .txt
-    index_file = indexfile.rstrip('.txt')
+    # 1) Remove path, if necessary
+    index_file = os.path.basename(index_file)
+
+    # 2) Check if it's an index file
+    if is_index_file(index_file) == False:
+        return index_file_parts
+
+    # 3) Strip off .txt
+    index_file = index_file[:-len('.txt')]
+
+    # 4) Then split on double-underscore. 
+    #       table_name is in position 0 after split. index-TYPE-ATTRIBUTE in position 1.
+    index_file_split1 = index_file.split('__')
+    index_file_parts.append(index_file_split1[0])
+
+    # 5) Split the second part on dash
+    #       index_type is in position 1. attr_name is in position 2.
+    index_file_split2 = index_file_split1[1].split('-')
+    index_file_parts.append(index_file_split2[1])
+    index_file_parts.append(index_file_split2[2])
     
-    # Then split on double-underscore
-    index_file_parts = index_file.split('__')
-    
-    table_name = index_file_parts[0]
-    
-    # Attribute name is the third part of index_file_parts[1]
-    index_info = index_file_parts[1]
-    index_info_parts = index_info.split('-')
-    
-    # The attribute being indexed is the last part of index_info_parts
-    attr_name = index_info_parts[2]
-    
-    return table_name + '.' + attr_name
+    return index_file_parts
     
 def get_query_index_list(table_list):
     """GET_QUERY_INDEX_LIST
@@ -75,8 +84,9 @@ def get_query_index_list(table_list):
         index_directory = get_index_directory(table_name)
         for item in os.listdir(index_directory):
             if is_index_file(item) == True:
-                # If it's an index file: good. 
-                ta = get_table_attribute_from_index_filename(item)
+                # If it's an index file: good.
+                index_parts = parse_index_filename(item)
+                ta = combine_table_attribute_pair(index_parts[0], index_parts[2])
         
                 # Add table.attr as key to index_dict
                 if ta not in index_dict:
@@ -87,20 +97,13 @@ def get_query_index_list(table_list):
             
     return index_dict
 
-def get_index_list_table_attr(ta):
-    index_list_table_attr = []
-    table_name = ta[0]
-    attr_name = ta[1]
-    index_directory = get_index_directory()
-    index_list_table = get_index_list_table(table_name)
-    for i in index_list_table:
-        ta2 = get_table_attribute_from_index_filename(i)
-        if ta == ta2:
-            index_list_table_attr.append(i)
-    
-    return index_list_table_attr
     
 def get_index_list_table(table_name):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     # appends index fullpath to list for a single table
     index_list = []
     index_directory = get_index_directory(table_name)
@@ -112,6 +115,11 @@ def get_index_list_table(table_name):
     return index_list
     
 def get_index_list_all():
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     # appends index filename (not path) to dict for all existing indexes
     index_dict = {}
     index_directory = get_index_directory()
@@ -125,6 +133,11 @@ def get_index_list_all():
     return index_dict
     
 def get_index_fullpath_keyword(table_name, keyword):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     index_directory = get_index_directory(table_name)
     index_components = [table_name, '__index-keyword-', keyword, '.txt']
     index_fullpath = os.path.join(index_directory, ''.join(index_components))
@@ -132,10 +145,15 @@ def get_index_fullpath_keyword(table_name, keyword):
     
     
 def write_index_file_keyword(table_name, keyword, index_results_dict):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     index_fullpath = get_index_fullpath_keyword(table_name, keyword)
     
-    # Just overwrite existing file
-    f = open(index_fullpath, 'w')
+    # Just overwrite existing file if it already exists
+    f = open(index_fullpath, 'w', encoding='utf-8')
     for k_sorted_tuple in sorted(index_results_dict.items()):
         # format of keyword index line:     k:pointer1,pointer2,p3,...
         k = k_sorted_tuple[0]
@@ -150,9 +168,22 @@ def write_index_file_keyword(table_name, keyword, index_results_dict):
     return index_fullpath
 
 def exists_index_file_keyword(table_name, keyword):
+    """EXISTS_INDEX_FILE_KEYWORD
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     return os.path.exists(get_index_fullpath_keyword(table_name, keyword))
 
 def read_index_file_keyword(table_name, keyword):
+    """READ_INDEX_FILE_KEYWORD
+        DESCRIPTION: For a given table_name and keyword (attribute), open the corresponding
+            keyword index file. For each line, add the keyword into a dict as a key, and
+            the following numbers on the line as the dict values. This represents an
+            byte number index for each keyword in the table.
+        INPUT: 
+        OUTPUT: 
+    """
     index_results_dict = {}
     index_fullpath = get_index_fullpath_keyword(table_name, keyword)
     
@@ -173,11 +204,26 @@ def read_index_file_keyword(table_name, keyword):
     f.close()
     
     return index_results_dict
-    
+
+def zero_pass_query(table_name, q):
+    """ZERO_PASS_QUERY
+        DESCRIPTION: See if all attributes in WHERE clause for a given table_name are
+            covered by an index. If this is true, then a query can be performed without
+            scanning an entire table, just by going to particular bytes in a file.
+        INPUT: 
+        OUTPUT: 
+    """
+    pass
+
 """INDEX COMMAND HANDLERS
 """
 
 def cmd_index_show():
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     index_dict = get_index_list_all()
     
     # Handle empty case first
@@ -190,6 +236,11 @@ def cmd_index_show():
                 print('  ', index)
 
 def cmd_index_show_table(table_name):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     index_list = get_index_list_table(table_name)
     
     # Handle empty case first
@@ -200,6 +251,11 @@ def cmd_index_show_table(table_name):
             print(index)
     
 def cmd_index_create_keyword(table_name, keyword):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     # START TIMER - after receiving index command
     start_time = time.time()
     # TODO: might want to check against available tables so you don't create index for nonexistent table
@@ -221,34 +277,42 @@ def cmd_index_create_keyword(table_name, keyword):
     attribute_dict = get_attribute_dict2([table_name])
     
     # get index # in attribute_list of keyword
-    ta = table_name + '.' + keyword
+    ta = combine_table_attribute_pair(table_name, keyword)
     k = get_attribute_index(ta, attribute_dict)
     
-    # For now - create index in memory, write at the end
+    # Create index in memory, write at the end
     index_results_dict = {}
     
-    with open(csv_fullpath, newline = '', encoding = 'utf-8') as f:
-        r = csv.reader(f)
-        next(r)     # Skip the header row
-        for row in r:
-            
-            # Skip over blank rows, it's a killer
-            if ''.join(row).strip() == '':
-                continue
-            
-            #TODO: fails here if attr doesn't exist in table
-            v = row[k]
-            
-            # don't index null results
-            if v != '':
-                # add v as key in index_results_dict if necessary
-                if v not in index_results_dict:
-                    index_results_dict[v] = []
-                
-                index_results_dict[v].append(r.line_num)
-                
-    f.closed
+    # b is the byte position in the file
+    b = 0
     
+    with open(csv_fullpath, 'rb') as f:
+        while True:
+            f.seek(b)
+            (b_returned, line) = readline_like_csv(f)
+            if not line:
+                break
+            # Assume the first row is the header. Skip it.
+            # Also skip if it's a blank row.
+            if b > 0 and line.strip() != '':
+                for row in csv.reader([line]):
+#                    print('row:',row)
+#                    print('k:',k)
+                    #TODO: fails here if attr doesn't exist in table
+                    v = row[k]
+    
+                    # don't index null results
+                    if v != '':
+                        # add v as key in index_results_dict if necessary
+                        if v not in index_results_dict:
+                            index_results_dict[v] = []
+        
+                        index_results_dict[v].append(b)
+    
+            # After reading row, get the byte number of the cursor
+            # b = f.tell()
+            b = b_returned
+                    
     # END TIMER - after indexing
     print("--- %s seconds ---" % (time.time() - start_time))
     # Write results to file
@@ -256,6 +320,11 @@ def cmd_index_create_keyword(table_name, keyword):
     return
     
 def cmd_index_delete(table_name):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     index_directory = get_index_directory(table_name)
     index_list = get_index_list_table(table_name)
     
@@ -263,8 +332,31 @@ def cmd_index_delete(table_name):
         index_fullpath = os.path.join(index_directory, index_filename)
         print('Deleting', index_filename)
         os.remove(index_fullpath)
+
+def get_index_command():
+    """GET_INDEX_COMMAND
+        DESCRIPTION: Shows user options for index context, retrieves user input
+        INPUT: None
+        OUTPUT: string index_command: user command for index context
+    """
+    print()
+    print('show                               - Show all existing indexes')
+    print('show index TABLE                   - Show all indexes for table')
+    print('create index TABLE keyword KEYWORD - Create a new keyword index')
+    print('delete index TABLE                 - Deletes all indexes on table')
+    print()
+    
+    index_command = input('index > ')
+    # TODO: validate input
+    
+    return index_command
     
 def index_command_handler():
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
     user_index_command = get_index_command()
     
     if user_index_command != '':
@@ -288,10 +380,10 @@ def index_command_handler():
                 table_name = table_name.strip()
                 return cmd[index_command](table_name)
             elif index_command_list[0] == 'create' and index_command_list[1] == 'index':
-                index_command = index_command_list[0] + ' ' + index_command_list[1] + ' ' + index_command_list[3]
+                index_command = 'create index ' + index_command_list[3]
                 return cmd[index_command](index_command_list[2], index_command_list[4])
             elif index_command_list[0] == 'delete' and index_command_list[1] == 'index':
-                index_command = index_command_list[0] + ' ' + index_command_list[1]
+                index_command = 'delete index'
                 return cmd[index_command](index_command_list[2])
         else:
             return cmd[user_index_command]()

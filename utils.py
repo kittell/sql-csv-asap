@@ -190,11 +190,6 @@ def get_query_table_list(raw_query):
     
     return query_table_list
 
-def display_query_result(result_list):
-    print('\n***RESULTS***')
-    for row in result_list:
-        print(row)
-
 
 def sql_not_like(a, b):
     """SQL_NOT_LIKE
@@ -217,6 +212,7 @@ def sql_like(a, b):
     # Assumption: max of two % wildcards in b, one at start, one at end
     # TODO: throw error if more than two %, or % in middle of string
     # TODO: account for '_' matching of a single character
+    # TODO: regex this
     
     # Split b into wildcards and pattern
     # The resulting list will have an empty string where the wildcard was
@@ -225,28 +221,27 @@ def sql_like(a, b):
 #    print('b_split:', b_split)
     result = False
     
+    # Convert inputs into strings
+    a = str(a)
+    b = str(b)
+    
     if a == b:
         # Case 0: it's the same string
-#        print('Case 0')
         result = True
     
     elif len(b_split) == 2:
         if b_split[0] == '':
             # Case 1: wildcard at start of b
             result = a.endswith(b_split[1])
-#            print('Case 1:', result)
             
         elif b_split[1] == '':
             # Case 2: wildcard at end of b
             result = a.startswith(b_split[0])
-#            print('Case 2:', result)
             
     elif len(b_split) == 3:
         if b_split[0] == '' and b_split[2] == '':
-            # Case 3: wildcard at start and end of b
             if b_split[1] in a:
                 result = True
-#            print('Case 3:', result)
     
     return result
 
@@ -298,6 +293,7 @@ def parse_table_attribute_pair(ta):
     if '.' in ta:
         result = ta.split('.')
     else:
+        # No dots - assume it's just an attribute name, no table name
         result = ['', ta]
     return result
 
@@ -331,5 +327,54 @@ def remove_temp_files():
     file_list = os.listdir(dir)
     for file in file_list:
         if os.path.isfile(os.path.join(dir, file)) == True:
-            test_print('remove_temp_files / file', file)
+#            test_print('remove_temp_files / file', file)
             os.remove(os.path.join(dir, file))
+
+
+def readline_like_csv(f):
+    """READLINE_LIKE_CSV
+    DESCRIPTION: The __next__ method in csv.reader disables f.tell, which is being used
+        in indexing functions to get and write the byte position. The byte position can
+        be found via f.tell when opening a file in 'rb' mode. However, when doing a 
+        .readline() from a file, it doesn't respect that a newline \n inside double
+        quotes should be part of the same field the way the csv module does. So: This 
+        function tries to merge readlines when there is an open double-quote.
+    INPUT: File f
+    OUTPUT:
+        - int f.tell(): allow calling code to skip any merged lines and not read again
+        - string line: for most cases, just the readline retrieved from file; but if
+        there is a double-quote broken across a newline, merges lines until both
+        double-quotes are in the string
+    NOTES: This was a real pain to balance using csv.reader and byte position together
+        was not compatible...
+    """
+    # For the specific implementation, need to decode from byte mode.
+    
+    n_quotes = 0        # running count to determine open-close of double-quotes
+    open_quotes = False
+    prev_line = ''
+    b = f.tell()
+    
+    while open_quotes == False:
+        # TODO: debug this try-except block -- not sure if it's universal
+        try:
+            # Line is a byte object
+            this_line = f.readline().decode()
+        except AttributeError:
+            # Line has already been decoded into string
+            f.seek(b)
+            this_line = f.readline()
+        except TypeError:
+            f.seek(b)
+            this_line = f.readline()
+
+        line = prev_line + this_line
+        n_quotes = line.count('"')
+        
+        if n_quotes %2 == 0:
+            open_quotes = True
+        prev_line = line
+        
+        b = f.tell()
+                
+    return b, line

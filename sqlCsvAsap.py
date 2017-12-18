@@ -156,6 +156,13 @@ def cmd_show_attributes(table_name):
     return True
 
 
+def display_query_result(result_list):
+    print('\n***RESULTS (' + str(len(result_list)) + ') ***')
+    
+    for row in result_list:
+        print(row)
+
+
 # MAIN
 
 if __name__ == '__main__':
