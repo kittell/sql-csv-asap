@@ -157,11 +157,14 @@ def cmd_show_attributes(table_name):
 
 
 def display_query_result(result_list):
-    print('\n***RESULTS (' + str(len(result_list)) + ') ***')
+    # Note: -1 because first row is header
+    n_results = len(result_list) - 1
+    result_string = '\n*** RESULTS (' + str(n_results) + ') ***'
     
+    print(result_string)
     for row in result_list:
         print(row)
-
+    print(result_string)
 
 # MAIN
 
