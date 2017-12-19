@@ -361,7 +361,7 @@ def readline_like_csv(f):
         # TODO: debug this try-except block -- not sure if it's universal
         try:
             # Line is a byte object
-            this_line = f.readline().decode()
+            this_line = f.readline().decode(encoding='utf-8')
         except AttributeError:
             # Line has already been decoded into string
             f.seek(b)

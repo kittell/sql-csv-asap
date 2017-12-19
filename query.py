@@ -113,11 +113,12 @@ def perform_query(q):
     
     # For each table, get the results filtered by value_constraints in the WHERE clause
     (filtered_dict_headers, filtered_dict) = filter_value_constraints(q)
-    test_print('filtered_dict_headers:',filtered_dict_headers)
-    test_print('filtered_dict:',filtered_dict)
 
     # For each table pair, get the table1-table2 pairs resulting from join_constraints in WHERE clause
-    join_dict = filter_join_constraints(q, filtered_dict)
+    (join_dict, filtered_dict_headers, filtered_dict) = filter_join_constraints(q, filtered_dict_headers, filtered_dict)
+    
+    test_print('filtered_dict_headers:',filtered_dict_headers)
+    test_print('filtered_dict:',filtered_dict)
     test_print('join_dict:',join_dict)
     
     # Combine the results
@@ -125,7 +126,7 @@ def perform_query(q):
     
     return final_results
 
-def filter_join_constraints(q, filtered_dict):
+def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
     """
     DESCRIPTION: 
     INPUT: 
@@ -133,6 +134,12 @@ def filter_join_constraints(q, filtered_dict):
     """
     join_results_dict = {}
     #join_results_dict[table1, table2] = [(b1, b2)]
+    
+    # If any tables didn't have a filter, capture data from the table2 rows that pass the join_constraints
+    # into new_filtered_dict. Apply to filtered_dict at the end of the method. Data will be used at the
+    # end of the query to project the final results.
+    new_filtered_dict = {}
+    new_filtered_dict_headers = {}
     
     # Build list of tables to check
     table1_list = []
@@ -146,15 +153,31 @@ def filter_join_constraints(q, filtered_dict):
     for table1 in table1_list:
     
         # Get (a) filtered byte_list or (b) index byte_list or (c) need to table scan
-        byte_list1 = None
         has_index1 = value_constraint_has_index(q, table1)
+        has_filter1 = False
         if table1 in filtered_dict:
-            # Filtered table scan
+            if filtered_dict[table1] != None:
+                # So: Table1 was filtered, returned no results (if None, not filtered)
+                has_filter1 = True
+        else:
+            if table1 not in new_filtered_dict:
+                new_filtered_dict[table1] = {}
+                new_filtered_dict_headers[table1] = project_row(q, table1, 'header')
+                
+        
+        byte_list1 = None
+        if has_filter1 == True:
+            # Case a: Table has been filtered, use byte positions returned from filter.
             byte_list1 = []
             for b in filtered_dict[table1]:
                 byte_list1.append(b)
         elif has_index1 == True:
+            # Case b: No filter, but there is an index for this table. Use byte positions from index.
+            byte_list1 = []
             byte_list1 = get_index_byte_list(q, table1)
+        # Case c: If byte_list1 is still None at this point, need to do a table scan on table1
+        
+#        test_print('byte_list1:',byte_list1)
 
         # Loop over table1
         csv_fullpath1 = table_to_csv_fullpath(table1)
@@ -163,9 +186,19 @@ def filter_join_constraints(q, filtered_dict):
         i1 = 0
 
         while True:
-            if len(byte_list1) != None:
-                b1 = byte_list1[i1]
-                i1 += 1
+            # Determine the next byte position b1 to go to in f1
+            if byte_list1 != None:
+                if len(byte_list1) == 0:
+                    # This is the case where table1 was filtered, and all results were filtered out.
+                    # So: Stop scanning anything with table1 as first table in pair, there will be no joins.
+                    break
+                else:
+                    # Retrieve next byte position from byte list, if filter or index is available
+                    b1 = byte_list1[i1]
+                    i1 += 1
+            else:
+                # (c) table scan
+                pass
         
             # Return the line from position b1 in the file
             f1.seek(b1)
@@ -183,7 +216,27 @@ def filter_join_constraints(q, filtered_dict):
                         # Only check constraints where table1 is the first table
                         if table_pair[0] != table1:
                             continue
+                        
+                        # Open table2 for reading
                         table2 = table_pair[1]
+                        
+                        # Check filter before entering join_constraints[table_pair] loop. If it is an empty dict now,
+                        # it will be replaced with values as the join constraints are evaluated.
+                        # i.e., it would indicate a filter on table2 exists when it doesn't.
+                        has_filter2 = False
+                        if table2 in filtered_dict:
+                            if bool(filtered_dict[table2]):
+                                # This will return false if filtered_dict[table2] is an empty dict
+                                # So: Table1 was filtered, returned no results (if None, not filtered)
+                                has_filter2 = True
+
+                        else:
+                            if table2 not in new_filtered_dict:
+                                new_filtered_dict[table2] = {}
+                                new_filtered_dict_headers[table2] = project_row(q, table2, 'header')
+                        
+                        csv_fullpath2 = table_to_csv_fullpath(table2)
+                        f2 = open(csv_fullpath2, 'rb')
                         
                         for c2 in q.join_constraints[table_pair]:
                             attr_name1 = parse_table_attribute_pair(q.WHERE[c2]['Subject'])[1]
@@ -191,37 +244,57 @@ def filter_join_constraints(q, filtered_dict):
                             attr_value1 = row1[attr_index1]
                             attr_name2 = parse_table_attribute_pair(q.WHERE[c2]['Object'])[1]
                             has_index2 = join_constraint_has_index(q, table2, attr_name2)
-                    
-                            # (a) Get filtered byte list, or (b) index byte list, or (c) need to table scan
+                            
+                            # Determine whether: (a) filtered byte_list or (b) index byte_list or (c) need to table scan
                             byte_list2 = None
-                            if table2 in filtered_dict:
-                                # Filtered table scan
+                            if has_filter2 == True:
+                                # Case a: Table has been filtered, use byte positions returned from filter.
+#                                print('has_filter2')
+#                                print('filtered_dict[table2]',filtered_dict[table2])
                                 byte_list2 = []
                                 for b in filtered_dict[table2]:
                                     byte_list2.append(b)
                             elif has_index2 == True:
+                                # Case b: No filter, but there is an index for this table.
+                                # Use byte positions from index for attr_name2 and attr_value1 (yes, attr_value2 is based on attr_value1)
+#                                print('has_index2')
+                                byte_list2 = []
                                 byte_list2 = get_index_byte_list(q, table2, attr_name2, attr_value1)
-                            else:
-                                # Table scan
-                                pass
-
+                                printstring = 'index / byte_list2:' + attr_name2 + attr_value1
+#                                print(printstring)
+#                                print(byte_list2)
+                            # Case c: If byte_list2 is still None at this point, need to do a table scan on table2
+                            
+#                            test_print('byte_list2',byte_list2)
+                            
                             # Loop over table2
-                            csv_fullpath2 = table_to_csv_fullpath(table2)
-                            f2 = open(csv_fullpath2, 'rb')
                             b2 = 0
                             i2 = 0
                             int_result = []
                             while True:
+                                if b2 == 0:
+#                                    print('start table2: byte_list2:',byte_list2)
+                                    pass
+                                # Determine the next byte position b2 to go to in f2
                                 if byte_list2 != None:
                                     if len(byte_list2) == 0:
+                                        # This is the case where table2 was filtered, and all results were filtered out.
+                                        # So: Stop scanning anything with table1 as first table in pair, there will be no joins.
                                         break
-                                    b2 = byte_list2[i2]
-                                    i2 += 1
+                                    else:
+                                        # Retrieve next byte position from byte list, if filter or index is available
+                                        b2 = byte_list2[i2]
+                                        i2 += 1
+                                else:
+                                    # (c) table scan
+                                    pass
                     
                                 # Return the line from position b2 in the file
                                 f2.seek(b2)
                                 (b2_returned, line2) = readline_like_csv(f2)
-                    
+                                
+#                                print('seek(b2) byte_list2:',byte_list2)
+                                
                                 # Line will read empty at end of file for table scan
                                 if not line2:
                                     break
@@ -233,16 +306,20 @@ def filter_join_constraints(q, filtered_dict):
                                             # row1-row2 passes join constraints. Capture the results.
                                             join_results_dict[table_pair].append((b1, b2))
                                             
-                                            # TODO: if there was no filtered_dict for table1 or table2,
-                                            #   create it, append to it, return it;
-                                            #   otherwise, need a file read later when combining results
+                                            # Add to filter_dict[table2] if there was no filter before starting.
+                                            if table2 in new_filtered_dict:
+                                                if b2 not in new_filtered_dict[table2]:
+                                                    new_filtered_dict[table2][b2] = project_row(q, table2, '', row2)
+                                            if table1 in new_filtered_dict:
+                                                if b1 not in new_filtered_dict[table1]:
+                                                    new_filtered_dict[table1][b1] = project_row(q, table1, '', row1)
 
                                 # Check if byte_list2 has been exhausted -- if so, exit
                                 if byte_list2 != None:
                                     if i2 == len(byte_list2):
                                         break
                                 b2 = b2_returned
-                            f2.close()
+                        f2.close()
 
             # Check if byte_list1 has been exhausted -- if so, exit
             if byte_list1 != None:
@@ -252,7 +329,16 @@ def filter_join_constraints(q, filtered_dict):
     
         f1.close()
     
-    return join_results_dict
+    # Feed new_filtered_dict into filtered_dict
+    for table in new_filtered_dict:
+        if table not in filtered_dict:
+            filtered_dict[table] = {}
+        if table not in filtered_dict_headers:
+            filtered_dict_headers[table] = {}
+        filtered_dict[table] = new_filtered_dict[table]
+        filtered_dict_headers[table] = new_filtered_dict_headers[table]
+    
+    return (join_results_dict, filtered_dict_headers, filtered_dict)
     
     
 def filter_value_constraints(q):
@@ -269,6 +355,9 @@ def filter_value_constraints(q):
         # Set up dict to hold results
         if table not in filtered_results_dict:
             filtered_results_dict[table] = {}
+            
+            # flag: If you get to the end of this filter, and there are no results
+            flag_no_results = True
         
         # Calculate headers
         filtered_headers_dict[table] = project_row(q, table, 'header')
@@ -304,6 +393,7 @@ def filter_value_constraints(q):
                         int_select_results = project_row(q, table, '', row)
                     if len(int_select_results) > 0:
                         filtered_results_dict[table][b] = int_select_results
+                        flag_no_results = False
             
             # Index will be out of range at end of index scan
             if has_index == True:
@@ -312,10 +402,16 @@ def filter_value_constraints(q):
             
             b = b_returned
         f.close()
+        
+        # If zero results are returned, that means none met the criteria
+        # To signal this, set the return value to None
+        if flag_no_results == True:
+            filter_results_dict[table] = None
     
     return filtered_headers_dict, filtered_results_dict
     
 def sort_final_results(final_select_results, q):
+    # TODO: Sort on q.ORDERBY
     return final_select_results
 
 def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
@@ -370,25 +466,28 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
             for table_pair in join_dict:
                 (table1, table2) = table_pair
                 for (b1, b2) in join_dict[table_pair]:
-                    # Check if b1 is in join_dict[table1] and b2 is in join_dict[table2]                    
-                    if b1 in filtered_dict[table1] and b2 in filtered_dict[table2]:
-                        # OK--both b1 and b2 exist, so build row_results from projected data.
-                        # TODO: This part below is very similar to above--reuse something
-                        row_results = []
-                        for i in range(len(q.SELECT)):
-                            table_attr = q.SELECT[i]
-                            (table, attr_name) = parse_table_attribute_pair(table_attr)
-                            for j in range(len(filtered_dict[table])):
-                                if filtered_dict_headers[table][j] == table_attr:
-                                    # Match to table1 or table2
-                                    if table == table1:
-                                        b = b1
-                                    elif table == table2:
-                                        b = b2
-                                    row_results.append(filtered_dict[table][b][j])
-                                    break
-                        if len(row_results) > 0:
-                            combined_results.append(row_results)
+                    # Check if b1 is in join_dict[table1] and b2 is in join_dict[table2]
+                    if table1 in filtered_dict and table2 in filtered_dict:
+                        if b1 in filtered_dict[table1] and b2 in filtered_dict[table2]:
+                            # OK--both b1 and b2 exist, so build row_results from projected data.
+                            # TODO: This part below is very similar to above--reuse something
+                            row_results = []
+                            for i in range(len(q.SELECT)):
+                                table_attr = q.SELECT[i]
+                                (table, attr_name) = parse_table_attribute_pair(table_attr)
+                                for j in range(len(filtered_dict[table])):
+                                    if filtered_dict_headers[table][j] == table_attr:
+                                        # Match to table1 or table2
+                                        if table == table1:
+                                            b = b1
+                                        elif table == table2:
+                                            b = b2
+                                        row_results.append(filtered_dict[table][b][j])
+                                        break
+                            if len(row_results) > 0:
+                                combined_results.append(row_results)
+        else:
+            
     
     return combined_results
 
@@ -492,11 +591,16 @@ def get_individual_join_constraint_results(q, table1, row1, table2, row2):
         table_attr1 = q.WHERE[i]['Subject']
         attr_index1 = get_attribute_index(table_attr1, q.attribute_dict)
         attr_value1 = row1[attr_index1]
+        
         operator = q.WHERE[i]['Verb']
+        
         table_attr2 = q.WHERE[i]['Object']
         attr_index2 = get_attribute_index(table_attr2, q.attribute_dict)
         attr_value2 = row2[attr_index2]
 
+#        print('attr_name1:',q.attribute_dict[table1][attr_index1],'|','attr_value1:',row1[attr_index1])
+#        print('attr_name2:',q.attribute_dict[table2][attr_index2],'|','attr_value2:',row2[attr_index2])
+        
         # Append result
         constraint_results.append(eval_binary_comparison(attr_value1, operator, attr_value2))
         
