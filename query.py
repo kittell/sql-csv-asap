@@ -434,7 +434,7 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
         header.append(table_attr)
     combined_results.append(header)
     
-    # CASE 1: No join constraints
+    # CASE 1: NO JOIN.
     if len(join_dict) == 0:
         for table in filtered_dict:
             for b in filtered_dict[table]:
@@ -452,7 +452,7 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
                 if len(row_results) > 0:
                     combined_results.append(row_results)
     
-    # CASE 2: combine join constraints with filtered data
+    # CASE 2: JOIN. Combine join constraints with filtered data.
     else:
         # General case: For each (table1,table2) pair in join_dict:
         #   For each (b1,b2) pair in join_dict[(table1,table2)]
@@ -460,34 +460,95 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
         # e.g., for a three table join, need to match b2 of join_dict[(table1,table2)] = (b1,b2)
         # with b2 of join_dict[(table2,table3)] = (b2,b3)
         # End result will be list of (b1,b2,b3) from which to gather data from filtered_dict
+
+        final_join_results = []
+        # join_table_list will indicate which columns in final_join_results are which tables
+        join_table_list = []
+        for (table1, table2) in q.join_constraints:
+            if table1 not in join_table_list:
+                join_table_list.append(table1)
+            if table2 not in join_table_list:
+                join_table_list.append(table2)
         
-        # CASE 2.1: Single join pair, (table1,table2)
-        if len(join_dict) == 1:
-            for table_pair in join_dict:
-                (table1, table2) = table_pair
-                for (b1, b2) in join_dict[table_pair]:
-                    # Check if b1 is in join_dict[table1] and b2 is in join_dict[table2]
-                    if table1 in filtered_dict and table2 in filtered_dict:
-                        if b1 in filtered_dict[table1] and b2 in filtered_dict[table2]:
-                            # OK--both b1 and b2 exist, so build row_results from projected data.
-                            # TODO: This part below is very similar to above--reuse something
-                            row_results = []
-                            for i in range(len(q.SELECT)):
-                                table_attr = q.SELECT[i]
-                                (table, attr_name) = parse_table_attribute_pair(table_attr)
-                                for j in range(len(filtered_dict[table])):
-                                    if filtered_dict_headers[table][j] == table_attr:
-                                        # Match to table1 or table2
-                                        if table == table1:
-                                            b = b1
-                                        elif table == table2:
-                                            b = b2
-                                        row_results.append(filtered_dict[table][b][j])
-                                        break
-                            if len(row_results) > 0:
-                                combined_results.append(row_results)
-        else:
-            
+        n_join_tables = len(join_table_list)
+        for (table1, table2) in join_dict:
+            # Get position of table1, table2 in join_table_list
+            for t in range(len(join_table_list)):
+                if table1 == join_table_list[t]:
+                    pos_b1 = t
+                elif table2 == join_table_list[t]:
+                    pos_b2 = t
+        
+            # Case: final_join_results is empty, add all table1:b1, table2:b2 for this (table1, table2)
+            # Also: it's the full solution for a two-table join
+            join_results_empty = False
+            if len(final_join_results) == 0:
+                join_results_empty = True
+
+            for (b1, b2) in join_dict[(table1, table2)]:
+                # Initialize int_result to length of number of tables to join
+                if join_results_empty == True:
+                    # don't think, just add
+                    new_row = [None] * n_join_tables
+                    new_row[pos_b1] = b1
+                    new_row[pos_b2] = b2
+                    final_join_results.append(new_row)
+
+                else:
+                    for row in range(len(final_join_results)):
+                        # Match b1 in row
+                        #   If position is None, add b2 to it
+                        #   Else if position is filled with a value different than b2:
+                        #       add a new row with b1 and b2 (and rest None)
+                        # Match b2...
+                        
+                        for i in range(2):
+                            # Flip b1 and b2 w/o rewriting the uglier code block
+                            if i == 0:
+                                i1 = b1; pos_i1 = pos_b1
+                                i2 = b2; pos_i2 = pos_b2
+                            else:
+                                i1 = b2; pos_i1 = pos_b2
+                                i2 = b1; pos_i2 = pos_b1
+                                
+                            if final_join_results[row][pos_i1] == i1:
+                                if final_join_results[row][pos_i2] == None:
+                                    final_join_results[row][pos_i2] = i2
+                                elif final_join_results[row][pos_i2] != i2:
+                                    new_row = [None] * n_join_tables
+                                    new_row[pos_i1] = i1
+                                    new_row[pos_i2] = i2
+                                    final_join_results.append(new_row)
+
+        # After all matching is done, remove any row in final_join_results containing None
+        for row in reversed(range(len(final_join_results))):
+            for i in final_join_results[row]:
+                if i == None:
+                    del final_join_results[row]
+                    break
+
+        test_print('final_join_results',final_join_results)
+        
+        # Get values for the byte positions from filtered_dict
+        for row in range(len(final_join_results)):
+            row_results = []
+            for i in range(len(q.SELECT)):
+                table_attr = q.SELECT[i]
+                (table, attr_name) = parse_table_attribute_pair(table_attr)
+                
+                # Get position of table in final_join_results
+                for t in range(len(join_table_list)):
+                    if join_table_list[t] == table:
+                        pos_b = t
+                        break
+                
+                b = final_join_results[row][pos_b]
+                for j in range(len(filtered_dict[table])):
+                    if len(filtered_dict_headers[table]) > j:
+                        if filtered_dict_headers[table][j] == table_attr:
+                            row_results.append(filtered_dict[table][b][j])
+            if len(row_results) > 0:
+                combined_results.append(row_results)
     
     return combined_results
 
@@ -513,6 +574,16 @@ def project_row(q, table, mode='', row=[]):
                 projected_results.append(row[attr_index])
 
     return projected_results
+
+
+def count_join_tables(join_constraints):
+    table_list = []
+    for (table1, table2) in join_constraints:
+        if table1 not in table_list:
+            table_list.append(table1)
+        if table2 not in table_list:
+            table_list.append(table2)
+    return len(table_list)
 
 
 def test_value_constraints(table, row, q):
@@ -645,166 +716,3 @@ def compare_join_constraints(q, table1, row1, table2, row2):
                 b = constraint_results[i + 1]   # next result term
                 result = eval_binary_comparison(a, op, b)
     return result
-
-def test_join_constraints(table1, row1, b1, q):
-    """TEST_JOIN_CONSTRAINTS
-        DESCRIPTION: A data row passed to test_join_constraints has already been tested
-            against any value constraints (i.e., non-join constraints) from the WHERE clause
-            in the query. After that, it is passed to test_join_constraints to see if it
-            meets any join constraints from the query.
-        INPUT:
-            - table1: table containing the data row of the front half of the query
-            - row1: data row from the front half of the query; has already passed value_constraints
-            - b1: byte position of the start of row1 in table1
-            - q: user query object
-        OUTPUT: boolean persistent_result: True if row1 passes its join constraints
-            (if there are no join constraints, also True); otherwise, False
-    """
-    result = True
-    persistent_result = False
-    
-    # 0 - check join_constraints to see if there's even a table_1-table_x join in WHERE
-    # 0.1 - if so, make a list of table2's to check
-    # 1 - for each table2:
-    #   ...
-    # 2 - compare multiple join constraints against a single table1
-    
-    # 0 - Check for join constraints
-    # Determine which table2's need to be opened and tested
-    table2_list = []
-    for table_pair in q.join_constraints:
-        if table_pair[0] == table1:
-            if table_pair[1] not in table2_list:
-                table2_list.append(table_pair[1])
-    
-    # Exit here if there are no join constraints to check, i.e., not table 2 for this table1
-    if len(table2_list) == 0:
-        return True
-    
-    # 1 - Only need to do further processing if table1 shows up as the first in a pair of join_constraints
-    #       (if it's the second, it will be handled later)
-    
-    # loop through available combos of table2 (of a table1-table2 pair)
-    # loop through the where constraints on that pair
-    for table2 in table2_list:
-
-        for table_pair in q.join_constraints:
-            if table_pair[0] == table1 and table_pair[1] == table2:
-                # Therefore: A join constraint exists on this table1-table2 pair, e.g.,
-                #   WHERE table1.attr_name1 = table2.attr_name2
-                
-                # Get attribute name from right side of join equation. There may be 
-                # more than one on this pair. Try to find an attribute name that has
-                # an associated index; if not, take the attribute name of the first pair.
-                constraint_list = q.join_constraints[table_pair]
-                i_constraint = 0
-                for i in constraint_list:
-                    ta2 = q.WHERE[i]['Object']
-                    if ta2 in q.index_list:
-                        # Found this table.attr pair in the index list
-                        i_constraint = i
-                        break
-                    
-                ta1 = q.WHERE[i_constraint]['Subject']
-                ta2 = q.WHERE[i_constraint]['Object']
-                ta_split1 = parse_table_attribute_pair(ta1)
-                ta_split2 = parse_table_attribute_pair(ta2)
-                attr_name2 = ta_split2[1]
-                    
-                # INDEXING: Get index info for table2.attr_name2
-                has_index2 = join_constraint_has_index(q, table2, attr_name2)
-
-                # Get the attr1 value for this specific WHERE join constraint
-                attr_index1 = get_attribute_index(ta1, q.attribute_dict)
-                attr_value1 = row1[attr_index1]
-        
-                index_byte_list2 = get_index_byte_list(q, table2, attr_name2, attr_value1)
-        
-                # walk through table 2
-                csv2 = table_to_csv_fullpath(table2)
-                with open(csv2, newline = '', encoding = 'utf-8') as f2:
-#                    test_print('test_join_constraints / open(csv2)', csv2)
-            
-                    if has_index2 == True:
-                        # Has an index? Index scan.
-                        for b2 in index_byte_list2:
-                            f2.seek(b2)
-                            line = readline_like_csv(f2)[1]
-                            for row2 in csv.reader([line]):
-                                # First: apply value constraints to row. if it doesn't pass that, no need to join
-                                pass_value_constraints = test_value_constraints(table2, row2, q)
-                                if pass_value_constraints == True:
-                                    # Then: compare join constraints between table1 and table2
-                                    result = compare_join_constraints(q, table1, row1, table2, row2)
-
-                                    if result == True:
-                                        persistent_result = True
-#                                        append_join_pair(table1, b1, table2, b2)
-#                                        append_filtered_row(table2, row2, b2)
-                                        
-
-                    else:
-                        # No index? Table scan.
-                        b2 = 0
-                        while True:
-                            f2.seek(b2)
-                            (b_returned, line) = readline_like_csv(f2)
-                            if not line:
-                                break
-                            # Assume the first row is the header. Skip it.
-                            # Also skip if it's a blank row.
-                            if b2 > 0 and line.strip() != '':
-                                for row2 in csv.reader([line]):
-                                    int_select_results = []
-                                    # test row1 against value_constraints[table1]
-                                    pass_value_constraints = test_value_constraints(table2, row2, q)
-                                    if pass_value_constraints == True:
-                                        # Then: compare join constraints between table1 and table2
-                                        result = compare_join_constraints(q, table1, row1, table2, row2)
-
-                                        if result == True:
-                                            persistent_result = True
-                                            append_join_pair(table1, b1, table2, b2)
-                                            append_filtered_row(table2, row2, b2)
-                            b2 = b_returned
-    
-    return persistent_result
-
-
-def append_join_pair(table1, b1, table2, b2):
-    filepath = get_temp_join_fullpath(table1, table2)
-    
-    writeline = [table1, b1, table2, b2]
-    
-    with open(filepath, 'a', newline = '') as f:
-        w = csv.writer(f)
-        w.writerow(writeline)
-
-def write_all_join_pairs(list_of_lists, table1, table2):
-    filepath = get_temp_join_fullpath(table1, table2)
-    with open(filepath, 'w', newline='') as f:
-        for line in list_of_lists:
-            w = csv.writer(f)
-            w.writerow(line)
-    
-
-def append_filtered_row(table, row, b):
-    filepath = get_filtered_table_fullpath(table)
-    
-    writeline = []
-    writeline.append(b)
-    writeline = writeline + row
-    
-    with open(filepath, 'a', newline = '') as f:
-        w = csv.writer(f)
-        w.writerow(writeline)
-
-def write_all_filtered_rows(list_of_lists, table):
-    # Basically it's just a list of things to append_filtered_row on
-    
-    filepath = get_filtered_table_fullpath(table)
-    with open(filepath, 'w', newline='') as f:
-        for line in list_of_lists:
-            w = csv.writer(f)
-            w.writerow(line)
-        

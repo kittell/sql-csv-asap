@@ -291,10 +291,10 @@ def parse_table_attribute_pair(ta):
     # For a table.attr pair, split into [table, attr]
     # Assumption: zero or one dots
     if '.' in ta:
-        result = ta.split('.')
+        result = (ta.split('.')[0], ta.split('.')[1])
     else:
         # No dots - assume it's just an attribute name, no table name
-        result = ['', ta]
+        result = ('', ta)
     return result
 
 def combine_table_attribute_pair(t, a):
