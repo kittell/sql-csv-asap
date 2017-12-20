@@ -6,6 +6,8 @@ import operator
 import string
 
 # Set TESTMODE to True if you want to see intermediate calculations
+"""DEBUGGING METHODS
+"""
 TESTMODE = True
 
 def get_testmode():
@@ -21,9 +23,25 @@ def test_print(caption, term):
             term = term.encode('ascii', 'ignore')
             print(caption, ' : ', term)
 
+
+"""DIRECTORY AND FILENAME METHODS
+"""
+
+def get_directory(name):
+    working_directory = os.getcwd()
+    dir = os.path.join(working_directory, name)
+    
+    # If directory doesn't exist, create it
+    if os.path.isdir(dir) == False:
+        os.mkdir(dir)
+    
+    return dir
+
 def get_table_directory():
-	working_directory = os.getcwd()
-	return os.path.join(working_directory, 'tables')
+    return get_directory('tables')
+
+def get_temp_directory():
+    return get_directory('temp')
 
 def get_csv_fullpath(csv_filename):
     # TODO: protection for when a full path is sent to this function
@@ -31,14 +49,14 @@ def get_csv_fullpath(csv_filename):
     return csv_fullpath
 
 def get_filtered_table_fullpath(table):
-    table_directory = get_table_directory()
-    filtered_filename = 'temp_filtered_' + table + '.csv'
-    return os.path.join(table_directory, filtered_filename)
+    dir = get_temp_directory()
+    filtered_filename = 'temp_filtered__' + table + '.csv'
+    return os.path.join(dir, filtered_filename)
 
 def get_temp_join_fullpath(table1, table2):
-    table_directory = get_table_directory()
-    join_filename = 'temp_join_' + table1 + '_' + table2 + '.csv'
-    return os.path.join(table_directory, join_filename)
+    dir = get_temp_directory()
+    join_filename = 'temp_join__' + table1 + '__' + table2 + '.csv'
+    return os.path.join(dir, join_filename)
     
 
 def get_attribute_list(csv_fullpath):
@@ -48,6 +66,11 @@ def get_attribute_list(csv_fullpath):
     INPUT: csv_fullpath: full path and filename for target .csv file
     OUTPUT: attribute_list: list containing names of attributes (strings)
     """
+    # First: protect against receiving table_name instead of csv_fullpath...
+    if '.csv' not in csv_fullpath:
+        # Just assume it was a table_name; if not, better luck next time
+        csv_fullpath = table_to_csv_fullpath(csv_fullpath)
+    
     with open(csv_fullpath, newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
         attribute_list = next(reader)
@@ -149,8 +172,10 @@ def get_query_table_list(raw_query):
     full_table_list = get_table_list()
 
     # Remove punctuation from string
-    # https://stackoverflow.com/a/34294398/752784    
-    translator = str.maketrans('', '', string.punctuation)
+    # https://stackoverflow.com/a/34294398/752784
+    # remove_this is string.punctuation, minus the -
+    remove_this = '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
+    translator = str.maketrans('', '', remove_this)
     raw_query = raw_query.translate(translator)
 
     # Break raw query up so it's just a list of terms        
@@ -164,11 +189,6 @@ def get_query_table_list(raw_query):
                 break
     
     return query_table_list
-
-def display_query_result(result_list):
-    print('\n***RESULTS***')
-    for row in result_list:
-        print(row)
 
 
 def sql_not_like(a, b):
@@ -192,6 +212,7 @@ def sql_like(a, b):
     # Assumption: max of two % wildcards in b, one at start, one at end
     # TODO: throw error if more than two %, or % in middle of string
     # TODO: account for '_' matching of a single character
+    # TODO: regex this
     
     # Split b into wildcards and pattern
     # The resulting list will have an empty string where the wildcard was
@@ -200,53 +221,29 @@ def sql_like(a, b):
 #    print('b_split:', b_split)
     result = False
     
+    # Convert inputs into strings
+    a = str(a)
+    b = str(b)
+    
     if a == b:
         # Case 0: it's the same string
-#        print('Case 0')
         result = True
     
     elif len(b_split) == 2:
         if b_split[0] == '':
             # Case 1: wildcard at start of b
             result = a.endswith(b_split[1])
-#            print('Case 1:', result)
             
         elif b_split[1] == '':
             # Case 2: wildcard at end of b
             result = a.startswith(b_split[0])
-#            print('Case 2:', result)
             
     elif len(b_split) == 3:
         if b_split[0] == '' and b_split[2] == '':
-            # Case 3: wildcard at start and end of b
             if b_split[1] in a:
                 result = True
-#            print('Case 3:', result)
     
     return result
-
-def get_comparison_function(c):
-    """GET_COMPARISON_FUNCTION
-    DESCRIPTION: Convert a given comparison operator 
-    INPUT: 
-    OUTPUT: 
-    """
-    
-    # inspiration: https://stackoverflow.com/a/1740759/752784
-    # operator library: https://docs.python.org/3/library/operator.html
-    return {
-            '=': operator.eq,
-            '<>': operator.ne,
-            '<': operator.lt,
-            '<=': operator.le,
-            '>': operator.gt,
-            '>=': operator.ge,
-            'AND': operator.and_,
-            'OR': operator.or_,
-            'NOT': operator.not_,
-            'LIKE': sql_like,
-            'NOT LIKE': sql_not_like
-        }[c]
 
         
 def eval_binary_comparison(a, op, b):
@@ -255,8 +252,33 @@ def eval_binary_comparison(a, op, b):
     INPUT: 
     OUTPUT: 
     """
+    # inspiration: https://stackoverflow.com/a/1740759/752784
+    # operator library: https://docs.python.org/3/library/operator.html
     
-    return get_comparison_function(op)(a, b)
+    ops = {
+        '=': operator.eq,
+        '<>': operator.ne,
+        '<': operator.lt,
+        '<=': operator.le,
+        '>': operator.gt,
+        '>=': operator.ge,
+        'AND': operator.and_,
+        'OR': operator.or_,
+        'NOT': operator.not_,
+        'LIKE': sql_like,
+        'NOT LIKE': sql_not_like
+    }
+    
+    # Convert a and b to numbers, if possible
+    # TODO: why doesn't this work with float(a)?
+    try:
+        a = int(a)
+        b = int(b)
+    except:
+        pass
+    
+    result = ops[op](a, b)
+    return result
 
 
 def parse_table_attribute_pair(ta):
@@ -269,9 +291,10 @@ def parse_table_attribute_pair(ta):
     # For a table.attr pair, split into [table, attr]
     # Assumption: zero or one dots
     if '.' in ta:
-        result = ta.split('.')
+        result = (ta.split('.')[0], ta.split('.')[1])
     else:
-        result = ['', ta]
+        # No dots - assume it's just an attribute name, no table name
+        result = ('', ta)
     return result
 
 def combine_table_attribute_pair(t, a):
@@ -282,9 +305,12 @@ def combine_table_attribute_pair(t, a):
     return result
 
 def get_attribute_index(ta, attribute_dict):
+    # Default input: table_attr_split [t, a]
+    
     if '.' in ta:
-        # protection against different kind of input
+        # Case: ta = table.attribute pair - split it out
         ta = parse_table_attribute_pair(ta)
+    
     table = ta[0]
     attr = ta[1]
     
@@ -298,11 +324,59 @@ def get_attribute_index(ta, attribute_dict):
     return result
 
 def remove_temp_files():
-    file_start_strings = ['temp_']
-    table_directory = get_table_directory()
-    file_list = os.listdir(table_directory)
+    # Cleanup: remove files from /temp folder
+    dir = get_temp_directory()
+    file_list = os.listdir(dir)
     for file in file_list:
-        for pattern in file_start_strings:
-            if os.path.basename(file).startswith(pattern) == True:
-                test_print('remove_temp_files / file', file)
-                os.remove(os.path.join(table_directory, file))
+        if os.path.isfile(os.path.join(dir, file)) == True:
+#            test_print('remove_temp_files / file', file)
+            os.remove(os.path.join(dir, file))
+
+
+def readline_like_csv(f):
+    """READLINE_LIKE_CSV
+    DESCRIPTION: The __next__ method in csv.reader disables f.tell, which is being used
+        in indexing functions to get and write the byte position. The byte position can
+        be found via f.tell when opening a file in 'rb' mode. However, when doing a 
+        .readline() from a file, it doesn't respect that a newline \n inside double
+        quotes should be part of the same field the way the csv module does. So: This 
+        function tries to merge readlines when there is an open double-quote.
+    INPUT: File f
+    OUTPUT:
+        - int f.tell(): allow calling code to skip any merged lines and not read again
+        - string line: for most cases, just the readline retrieved from file; but if
+        there is a double-quote broken across a newline, merges lines until both
+        double-quotes are in the string
+    NOTES: This was a real pain to balance using csv.reader and byte position together
+        was not compatible...
+    """
+    # For the specific implementation, need to decode from byte mode.
+    
+    n_quotes = 0        # running count to determine open-close of double-quotes
+    open_quotes = False
+    prev_line = ''
+    b = f.tell()
+    
+    while open_quotes == False:
+        # TODO: debug this try-except block -- not sure if it's universal
+        try:
+            # Line is a byte object
+            this_line = f.readline().decode(encoding='utf-8')
+        except AttributeError:
+            # Line has already been decoded into string
+            f.seek(b)
+            this_line = f.readline()
+        except TypeError:
+            f.seek(b)
+            this_line = f.readline()
+
+        line = prev_line + this_line
+        n_quotes = line.count('"')
+        
+        if n_quotes %2 == 0:
+            open_quotes = True
+        prev_line = line
+        
+        b = f.tell()
+                
+    return b, line

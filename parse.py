@@ -1,9 +1,17 @@
 from utils import *
+from index import *
 
 def get_sql_terms():
     # List of SQL terms handled by program
-    return ['SELECT', 'FROM', 'WHERE']
+    return ['SELECT', 'FROM', 'WHERE', 'ORDER BY']
 
+def get_sql_terms_nospace():
+    # Replace the space with a dash. This is for parsing functions that are splitting
+    # on space to not get confused...
+    sql_terms = get_sql_terms()
+    for i in range(len(sql_terms)):
+        sql_terms[i] = sql_terms[i].replace(' ', '-')
+    return sql_terms
 
 def get_connector_list():
     # List of connectors for WHERE terms
@@ -48,6 +56,7 @@ def map_value_constraints(q):
         OUTPUT: value_constraints: dict of lists; key of dict is the table that the list of
             requirements applies to; value of dict is a list of index numbers from the main
             WHERE query containing a constraint relevant to this table
+            e.g., value_constraints[table1] = 0
     """
     value_constraints = {}
     
@@ -116,8 +125,15 @@ def find_query_substring(raw_query, this_term):
     # Find the entry for this_term and next_term
     # Reconstitute the substring from this_term to next_term - 1
     
+    sql_terms = get_sql_terms()
+    sql_terms_nospace = get_sql_terms_nospace()
+    
+    for i in range(len(sql_terms)):
+        if ' ' in sql_terms[i]:
+            this_term = this_term.replace(sql_terms[i], sql_terms_nospace[i])
+    
+    sql_terms = get_sql_terms_nospace()
     broken_query = raw_query.split(' ')
-    term_list = get_sql_terms()
     
     i_this = 0
     i_next = 0
@@ -140,7 +156,7 @@ def find_query_substring(raw_query, this_term):
     found = False
     for i in range(i_this + 1, len(broken_query)):
         if found == False:
-            for term in term_list:
+            for term in sql_terms_nospace:
                 if term == broken_query[i]:
                     i_next = i
                     found = True
@@ -379,7 +395,13 @@ def parse_where(raw_query, alias_dict={}):
                 continue
 
         else:
-            where_list[w]['Object'] = initial_where_list[i]
+            # append on object term -- possible to search for string split by spaces
+            # problem is the .split(' ') above would put it in two different list entries
+            # which would overwrite here if you don't append
+            if where_list[w]['Object'] == '':
+                where_list[w]['Object'] = initial_where_list[i]
+            else:
+                where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
             
     # Replace all attribute names with table.attribute
     table_list = get_query_table_list(raw_query)
@@ -390,6 +412,26 @@ def parse_where(raw_query, alias_dict={}):
         where_list[w]['Join'] = check_has_join(where_list[w]['Subject'], where_list[w]['Object'])
     
     return where_list
+    
+def parse_orderby(raw_query, alias_dict={}):
+    # TODO: doesn't work yet
+    # TODO: currently only handles a single term, ascending sort
+    orderby_substring = find_query_substring(raw_query, 'ORDER BY')
+    orderby_list = [orderby_substring]
+    
+    # Replace table alias with table names
+    orderby_list = replace_table_alias(orderby_list, alias_dict)
+    
+    # Replace all attribute names with table.attribute
+    table_list = get_query_table_list(raw_query)
+    orderby_list = force_table_attr_pairs(orderby_list, table_list)
+
+    # TODO: redo this when it's possible to sort on multiple terms
+    orderby_dict = {}
+    orderby_dict[orderby_substring] = 'ASC'
+    
+    return orderby_list
+
     
 def parse_alias(raw_query):
     """PARSE_ALIAS
@@ -409,20 +451,39 @@ def parse_alias(raw_query):
             alias_dict[from_alias[1]] = from_alias[0]
     
     return alias_dict
+
+def prepare_user_input(user_input):
+    # Combine SQL terms with more than one word into a single word
+    sql_terms = get_sql_terms()
+    sql_terms_nospace = get_sql_terms_nospace()
     
+    for i in range(len(sql_terms)):
+        if ' ' in sql_terms[i]:
+            user_input = user_input.replace(sql_terms[i], sql_terms_nospace[i])
+
+    # Trim spaces on ends
+    user_input = user_input.strip()
+    
+    return user_input
+
 class Query:
     def __init__(self, user_input):
         self.user_input = user_input
-        self.alias = parse_alias(self.user_input)
-        self.FROM = parse_from(self.user_input)
-        self.SELECT = parse_select(self.user_input, self.alias)
-        self.WHERE = parse_where(self.user_input, self.alias)
+        self.prepared_user_input = prepare_user_input(self.user_input)
+        self.alias = parse_alias(self.prepared_user_input)
+        self.FROM = parse_from(self.prepared_user_input)
+        self.SELECT = parse_select(self.prepared_user_input, self.alias)
+        self.WHERE = parse_where(self.prepared_user_input, self.alias)
+        self.ORDERBY = parse_orderby(self.prepared_user_input, self.alias)
         
-        self.query_table_list = get_query_table_list(self.user_input)
+        self.query_table_list = get_query_table_list(self.prepared_user_input)
         self.attribute_dict = get_attribute_dict2(self.query_table_list)
 
         self.join_constraints = map_join_constraints(self)
         self.value_constraints = map_value_constraints(self)
+        
+        # List of available indexes for query
+        self.index_list = get_query_index_list(self.query_table_list)
         
         self.show_parsed_query()
     
@@ -442,3 +503,7 @@ class Query:
                 if self.WHERE[i]['Join'] == True:
                     this_line = this_line + ' (join)'
                 print(this_line)
+        print('ORDER BY:', self.ORDERBY)
+
+        test_print('query_table_list:', self.query_table_list)
+        test_print('index_list:', self.index_list)

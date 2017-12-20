@@ -3,6 +3,7 @@ import csv
 from parse import *
 from query import *
 from utils import *
+from index import *
 import time
 
 def get_user_query():
@@ -27,6 +28,18 @@ def get_user_query():
     
     return user_query
 
+def get_index_command():
+    print()
+    print('show indexes                       - Show all existing indexes')
+    print('show indexes TABLE                 - Show all indexes for table')
+    print('create keyword index TABLE KEYWORD - Create a new keyword index')
+    print('delete index TABLE                 - Deletes all indexes on table')
+    print()
+    
+    index_command = input('index > ')
+    # TODO: validation of input?
+    
+    return index_command
 
 def execute_user_command(user_command):
     
@@ -35,11 +48,13 @@ def execute_user_command(user_command):
         'help':cmd_help,
         'quit':cmd_quit,
         'query':cmd_query,
+        'index':cmd_index,
+        'sort':cmd_sort,
         'show tables':cmd_show_tables,
         'show attributes in':cmd_show_attributes
     }
     
-    if user_command.startswith('show attributes in') == True:
+    if user_command.lower().startswith('show attributes in') == True:
         # get remainder of string after 'show attributes in'
         table_name = user_command[len('show attributes in'):len(user_command)]
         table_name = table_name.strip()
@@ -72,10 +87,9 @@ def cmd_help():
     print('Query format:')
     print('SELECT [attr] FROM [table] WHERE ([condition])')
     print('\nQUERY FORMATTING NOTES:')
-    print('1) Each WHERE condition must be contained in parentheses.')
-    print('2) Multiple WHERE conditions can be separated by logical operators:')
+    print('1) Multiple WHERE conditions can be separated by logical operators:')
     print('    WHERE (Year = 2000) AND (Value < 200)')
-    print('3) Not equal to is handled by a <> operator')
+    print('2) Not equal to is handled by a <> operator')
     print()
     
     return True
@@ -87,12 +101,15 @@ def cmd_quit():
     print('\n***Goodbye***\n')
     return False
 
+def cmd_index():
+    index_command_handler()
+    return True
+    
+def cmd_sort():
+    print('\nSort function not yet implemented\n')
+    return True
 
 def cmd_query():
-    # Collect a SQL query from the user. Parse it into components. Perform the 
-    
-    # TODO: validation: must have SELECT and WHERE
-        
     # Collect a query from the user.
     user_query = get_user_query()
     
@@ -139,10 +156,20 @@ def cmd_show_attributes(table_name):
     return True
 
 
+def display_query_result(result_list):
+    # Note: -1 because first row is header
+    n_results = len(result_list) - 1
+    result_string = '\n*** RESULTS (' + str(n_results) + ') ***'
+    
+    print(result_string)
+    for row in result_list:
+        print(row)
+    print(result_string)
+
 # MAIN
 
 if __name__ == '__main__':
-    print('!!!SQL CSV ASAP!!!')
+    print('\n\n!!!SQL CSV ASAP!!!')
     print('\nType help for a list of commands')
 
     # Keep running this loop while the user is using the program.
@@ -150,10 +177,13 @@ if __name__ == '__main__':
     keep_going = True
     while keep_going == True:
         user_command = get_user_command()
-        try:
-            keep_going = execute_user_command(user_command)
-        except KeyError:
-            print('Invalid command. Try again. Type "help" for a list of commands.')
+#        try:
+#            keep_going = execute_user_command(user_command)
+#        except KeyError:
+#            print('Invalid command. Try again. Type "help" for a list of commands.')
+
+# TODO: commenting out above because the KeyError is masking some problems...
+        keep_going = execute_user_command(user_command)
 
     # Remove temporary files
     if get_testmode() == False:
