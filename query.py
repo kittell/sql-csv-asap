@@ -31,11 +31,11 @@ def join_constraint_has_index(q, table_name='', attr_name=''):
     
     return False
 
-def get_index_byte_list(q, table_name, attr_name = '', attr_value = ''):
+def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
     """
     DESCRIPTION: Return a list of byte position numbers from an index for table_name.
     INPUT: 
-        - Query q:
+        - Query Q:
         - string table_name:
         - string attr_name: Name of attribute to find an index for. Should be empty for
             value_constraint index in order to find constraints for all attributes in 
@@ -54,18 +54,21 @@ def get_index_byte_list(q, table_name, attr_name = '', attr_value = ''):
     if attr_name == '' and attr_value == '':
         # Case 1: value_constraints. attr_name and attr_value are empty. Find all indexes
         #   for table_name.
-        if table_name in q.value_constraints:
-            for c in q.value_constraints[table_name]:
-                ta = q.WHERE[c]['Subject']
+        if table_name in Q.value_constraints:
+            for c in Q.value_constraints[table_name]:
+                ta = Q.WHERE[c]['Subject']
                 ta_split = parse_table_attribute_pair(ta)
                 if table_name == ta_split[0]:
                     # now see if there's an index corresponding to an attribute
                     attr_name = ta_split[1]
     
-                    if ta in q.index_list:
-                        index = read_index_file_keyword(table_name, attr_name)
-                        obj = q.WHERE[c]['Object']
-                        op = q.WHERE[c]['Verb']
+                    if ta in Q.index_list:
+                        #index = read_index_file_keyword(table_name, attr_name)
+                        
+                        # TODO: there has to be a better way to reference an index..........
+                        index = I.query_index_dict[table_name][attr_name].index_dict
+                        obj = Q.WHERE[c]['Object']
+                        op = Q.WHERE[c]['Verb']
 
                         for attr_value in index:
                             if eval_binary_comparison(attr_value, op, obj) == True:
@@ -81,8 +84,9 @@ def get_index_byte_list(q, table_name, attr_name = '', attr_value = ''):
     else:
         # Case 2: join_constraints. attr_name and attr_value have values.
         if exists_index_file_keyword(table_name, attr_name) == True:
-            index = read_index_file_keyword(table_name, attr_name)
-        
+            #index = read_index_file_keyword(table_name, attr_name)
+            # TODO: there has to be a better way to reference an index..........
+            index = I.query_index_dict[table_name][attr_name].index_dict
             if attr_value in index:
                 for i in index[attr_value]:
                     try:
@@ -93,14 +97,12 @@ def get_index_byte_list(q, table_name, attr_name = '', attr_value = ''):
 #    test_print('get_index_byte_list / index_byte_list:', index_byte_list)
     return index_byte_list
 
-def get_index_byte_dict(q, table_name):
-    return read_index_file_keyword(q, table_name)    
 
-def perform_query(q):
+def perform_query(Q, I):
     """PERFORM_QUERY
     DESCRIPTION: This is where the query work starts. Take a parsed SQL query, apply it
         to the selected tables, and return the final results.
-    INPUT: q: Query object with user input query information
+    INPUT: Q: Query object with user input query information
     OUTPUT: final_select_results: list of resulting data values from query
     NOTES:
         - Assumption: SELECT and FROM are valid. They are the minimum to query.
@@ -112,21 +114,21 @@ def perform_query(q):
     remove_temp_files()
     
     # For each table, get the results filtered by value_constraints in the WHERE clause
-    (filtered_dict_headers, filtered_dict) = filter_value_constraints(q)
+    (filtered_dict_headers, filtered_dict) = filter_value_constraints(Q, I)
 
     # For each table pair, get the table1-table2 pairs resulting from join_constraints in WHERE clause
-    (join_dict, filtered_dict_headers, filtered_dict) = filter_join_constraints(q, filtered_dict_headers, filtered_dict)
+    (join_dict, filtered_dict_headers, filtered_dict) = filter_join_constraints(Q, I, filtered_dict_headers, filtered_dict)
     
     test_print('filtered_dict_headers:',filtered_dict_headers)
     test_print('filtered_dict:',filtered_dict)
     test_print('join_dict:',join_dict)
     
     # Combine the results
-    final_results = combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict)
+    final_results = combine_final_results(Q, filtered_dict_headers, filtered_dict, join_dict)
     
     return final_results
 
-def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
+def filter_join_constraints(Q, I, filtered_dict_headers, filtered_dict):
     """
     DESCRIPTION: 
     INPUT: 
@@ -143,7 +145,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
     
     # Build list of tables to check
     table1_list = []
-    for table_pair in q.join_constraints:
+    for table_pair in Q.join_constraints:
         if table_pair not in join_results_dict:
             join_results_dict[table_pair] = []
         (table1, table2) = table_pair
@@ -153,7 +155,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
     for table1 in table1_list:
     
         # Get (a) filtered byte_list or (b) index byte_list or (c) need to table scan
-        has_index1 = value_constraint_has_index(q, table1)
+        has_index1 = value_constraint_has_index(Q, table1)
         has_filter1 = False
         if table1 in filtered_dict:
             if filtered_dict[table1] != None:
@@ -162,7 +164,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
         else:
             if table1 not in new_filtered_dict:
                 new_filtered_dict[table1] = {}
-                new_filtered_dict_headers[table1] = project_row(q, table1, 'header')
+                new_filtered_dict_headers[table1] = project_row(Q, table1, 'header')
                 
         
         byte_list1 = None
@@ -174,7 +176,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
         elif has_index1 == True:
             # Case b: No filter, but there is an index for this table. Use byte positions from index.
             byte_list1 = []
-            byte_list1 = get_index_byte_list(q, table1)
+            byte_list1 = get_index_byte_list(Q, I, table1)
         # Case c: If byte_list1 is still None at this point, need to do a table scan on table1
         
 #        test_print('byte_list1:',byte_list1)
@@ -212,7 +214,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
             if b1 > 0 and line1 != '':
                 for row1 in csv.reader([line1]):
                     # Search for various table1-table 2 join constraints
-                    for table_pair in q.join_constraints:
+                    for table_pair in Q.join_constraints:
                         # Only check constraints where table1 is the first table
                         if table_pair[0] != table1:
                             continue
@@ -233,17 +235,17 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
                         else:
                             if table2 not in new_filtered_dict:
                                 new_filtered_dict[table2] = {}
-                                new_filtered_dict_headers[table2] = project_row(q, table2, 'header')
+                                new_filtered_dict_headers[table2] = project_row(Q, table2, 'header')
                         
                         csv_fullpath2 = table_to_csv_fullpath(table2)
                         f2 = open(csv_fullpath2, 'rb')
                         
                         for c2 in q.join_constraints[table_pair]:
-                            attr_name1 = parse_table_attribute_pair(q.WHERE[c2]['Subject'])[1]
-                            attr_index1 = get_attribute_index(combine_table_attribute_pair(table1, attr_name1), q.attribute_dict)
+                            attr_name1 = parse_table_attribute_pair(Q.WHERE[c2]['Subject'])[1]
+                            attr_index1 = get_attribute_index(combine_table_attribute_pair(table1, attr_name1), Q.attribute_dict)
                             attr_value1 = row1[attr_index1]
-                            attr_name2 = parse_table_attribute_pair(q.WHERE[c2]['Object'])[1]
-                            has_index2 = join_constraint_has_index(q, table2, attr_name2)
+                            attr_name2 = parse_table_attribute_pair(Q.WHERE[c2]['Object'])[1]
+                            has_index2 = join_constraint_has_index(Q, table2, attr_name2)
                             
                             # Determine whether: (a) filtered byte_list or (b) index byte_list or (c) need to table scan
                             byte_list2 = None
@@ -259,7 +261,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
                                 # Use byte positions from index for attr_name2 and attr_value1 (yes, attr_value2 is based on attr_value1)
 #                                print('has_index2')
                                 byte_list2 = []
-                                byte_list2 = get_index_byte_list(q, table2, attr_name2, attr_value1)
+                                byte_list2 = get_index_byte_list(Q, I, table2, attr_name2, attr_value1)
                                 printstring = 'index / byte_list2:' + attr_name2 + attr_value1
 #                                print(printstring)
 #                                print(byte_list2)
@@ -302,17 +304,17 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
                                 # Skip first row (header) and blank rows
                                 if b2 > 0 and line2 != '':
                                     for row2 in csv.reader([line2]):
-                                        if compare_join_constraints(q, table1, row1, table2, row2) == True:
+                                        if compare_join_constraints(Q, table1, row1, table2, row2) == True:
                                             # row1-row2 passes join constraints. Capture the results.
                                             join_results_dict[table_pair].append((b1, b2))
                                             
                                             # Add to filter_dict[table2] if there was no filter before starting.
                                             if table2 in new_filtered_dict:
                                                 if b2 not in new_filtered_dict[table2]:
-                                                    new_filtered_dict[table2][b2] = project_row(q, table2, '', row2)
+                                                    new_filtered_dict[table2][b2] = project_row(Q, table2, '', row2)
                                             if table1 in new_filtered_dict:
                                                 if b1 not in new_filtered_dict[table1]:
-                                                    new_filtered_dict[table1][b1] = project_row(q, table1, '', row1)
+                                                    new_filtered_dict[table1][b1] = project_row(Q, table1, '', row1)
 
                                 # Check if byte_list2 has been exhausted -- if so, exit
                                 if byte_list2 != None:
@@ -341,7 +343,7 @@ def filter_join_constraints(q, filtered_dict_headers, filtered_dict):
     return (join_results_dict, filtered_dict_headers, filtered_dict)
     
     
-def filter_value_constraints(q):
+def filter_value_constraints(q, I):
     """
     DESCRIPTION: 
     INPUT: 
@@ -364,7 +366,7 @@ def filter_value_constraints(q):
         
         # Get index byte_list for this table, if it exists.
         has_index = value_constraint_has_index(q, table)
-        byte_list = get_index_byte_list(q, table)
+        byte_list = get_index_byte_list(q, I, table)
         
         # Open the table file for reading
         csv_fullpath = table_to_csv_fullpath(table)
