@@ -260,9 +260,8 @@ def filter_join_constraints(Q, I, filtered_dict_headers, filtered_dict):
                                 # Case b: No filter, but there is an index for this table.
                                 # Use byte positions from index for attr_name2 and attr_value1 (yes, attr_value2 is based on attr_value1)
 #                                print('has_index2')
-                                byte_list2 = []
                                 byte_list2 = get_index_byte_list(Q, I, table2, attr_name2, attr_value1)
-                                printstring = 'index / byte_list2:' + attr_name2 + attr_value1
+#                                printstring = 'index / byte_list2:' + attr_name2 + attr_value1
 #                                print(printstring)
 #                                print(byte_list2)
                             # Case c: If byte_list2 is still None at this point, need to do a table scan on table2

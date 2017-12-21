@@ -501,7 +501,7 @@ class Query:
                 if self.WHERE[i]['Subject'] not in where_table_attr_list:
                     where_table_attr_list.append(self.WHERE[i]['Subject'])
                 if self.WHERE[i]['Object'] not in where_table_attr_list:
-                    where_table_attr_list.append(self.WHERE[i]['Subject'])
+                    where_table_attr_list.append(self.WHERE[i]['Object'])
         return where_table_attr_list
     
     def show_parsed_query(self):

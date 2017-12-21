@@ -499,7 +499,7 @@ class IndexManager:
             
             index_dict[table_name][attr_name] = self.find_best_index(table_name, attr_name)
         
-        test_print('get_best_index_dict',index_dict)
+        test_print('load_indexes / index_dict',index_dict)
         self.query_index_dict = index_dict
         self.load_query_index_all(Q)
             
@@ -517,7 +517,6 @@ class IndexManager:
         for table_name in self.query_index_dict:
             for attr_name in self.query_index_dict[table_name]:
                 I = self.query_index_dict[table_name][attr_name]
-                print('I:',I)
                 if I != None:
                     I.read_index_file()
                     self.query_index_dict[table_name][attr_name] = I
