@@ -62,21 +62,21 @@ def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
                     # now see if there's an index corresponding to an attribute
                     attr_name = ta_split[1]
     
-                    if ta in Q.index_list:
-                        #index = read_index_file_keyword(table_name, attr_name)
+                    if table_name in I.query_index_dict:
+                        if attr_name in I.query_index_dict[table_name]:
                         
-                        # TODO: there has to be a better way to reference an index..........
-                        index = I.query_index_dict[table_name][attr_name].index_dict
-                        obj = Q.WHERE[c]['Object']
-                        op = Q.WHERE[c]['Verb']
+                            # TODO: there has to be a better way to reference an index..........
+                            index = I.query_index_dict[table_name][attr_name].index_dict
+                            obj = Q.WHERE[c]['Object']
+                            op = Q.WHERE[c]['Verb']
 
-                        for attr_value in index:
-                            if eval_binary_comparison(attr_value, op, obj) == True:
-                                for i in index[attr_value]:
-                                    try:
-                                        index_byte_list.append(int(i))
-                                    except:
-                                        continue
+                            for attr_value in index:
+                                if eval_binary_comparison(attr_value, op, obj) == True:
+                                    for i in index[attr_value]:
+                                        try:
+                                            index_byte_list.append(int(i))
+                                        except:
+                                            continue
 
                         # TODO: break after finding first one; could compare multiple here
                         break
@@ -108,23 +108,26 @@ def perform_query(Q, I):
         - Assumption: SELECT and FROM are valid. They are the minimum to query.
     """
 
+    # Query timer for debugging
+    checkpoint_time = time.time()
+
     final_results = []
-    
-    # remove temp files that may exist - an artifact of debug mode, which keeps them for viewing
-    remove_temp_files()
     
     # For each table, get the results filtered by value_constraints in the WHERE clause
     (filtered_dict_headers, filtered_dict) = filter_value_constraints(Q, I)
+    (start_time, checkpoint_time) = pause_printtime('filter_value_constraints:', checkpoint_time)
 
     # For each table pair, get the table1-table2 pairs resulting from join_constraints in WHERE clause
     (join_dict, filtered_dict_headers, filtered_dict) = filter_join_constraints(Q, I, filtered_dict_headers, filtered_dict)
+    (start_time, checkpoint_time) = pause_printtime('filter_join_constraints:', checkpoint_time)
     
-    test_print('filtered_dict_headers:',filtered_dict_headers)
-    test_print('filtered_dict:',filtered_dict)
-    test_print('join_dict:',join_dict)
+#    test_print('filtered_dict_headers:',filtered_dict_headers)
+#    test_print('filtered_dict:',filtered_dict)
+#    test_print('join_dict:',join_dict)
     
     # Combine the results
     final_results = combine_final_results(Q, filtered_dict_headers, filtered_dict, join_dict)
+    (start_time, checkpoint_time) = pause_printtime('combine_final_results:', checkpoint_time)
     
     return final_results
 
@@ -426,6 +429,7 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
     #join_dict[table1, table2] = [(b1, b2), ...]
     
     combined_results = []
+    checkpoint_time = time.time()
     
     # First: add headers to combined_results
     # TODO: If handling AS alias, use that instead
@@ -521,6 +525,8 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
                                     new_row[pos_i2] = i2
                                     final_join_results.append(new_row)
 
+        (start_time, checkpoint_time) = pause_printtime('combine_final_results / matching:', checkpoint_time)
+
         # After all matching is done, remove any row in final_join_results containing None
         for row in reversed(range(len(final_join_results))):
             for i in final_join_results[row]:
@@ -528,10 +534,26 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
                     del final_join_results[row]
                     break
 
-        test_print('final_join_results',final_join_results)
+#        test_print('final_join_results',final_join_results)
         
         # Get values for the byte positions from filtered_dict
+        
+        if get_testmode() == True:
+            next_percent = 1.0
+            prev_checkpoint_time = checkpoint_time
+        
         for row in range(len(final_join_results)):
+            if get_testmode() == True:
+                total_rows = len(final_join_results)
+                checkpoint_time = time.time()
+                print_this_round = False
+                if round(100* row/total_rows, 1) == next_percent:
+                    print_this_round = True
+                if print_this_round == True:
+                    next_percent +=1
+                    print ('row:', row, checkpoint_time - prev_checkpoint_time)
+                    prev_checkpoint_time = checkpoint_time
+                
             row_results = []
             for i in range(len(q.SELECT)):
                 table_attr = q.SELECT[i]
@@ -548,6 +570,11 @@ def combine_final_results(q, filtered_dict_headers, filtered_dict, join_dict):
                     if len(filtered_dict_headers[table]) > j:
                         if filtered_dict_headers[table][j] == table_attr:
                             row_results.append(filtered_dict[table][b][j])
+
+                    if get_testmode() == True:
+                        if print_this_round == True:
+                            print('j:',j,':',time.time()-checkpoint_time)
+
             if len(row_results) > 0:
                 combined_results.append(row_results)
     

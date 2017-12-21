@@ -500,8 +500,15 @@ class IndexManager:
             index_dict[table_name][attr_name] = self.find_best_index(table_name, attr_name)
         
         test_print('load_indexes / index_dict',index_dict)
+        
         self.query_index_dict = index_dict
-        self.load_query_index_all(Q)
+        
+        for table_name in self.query_index_dict:
+            for attr_name in self.query_index_dict[table_name]:
+                I = self.query_index_dict[table_name][attr_name]
+                if I != None:
+                    I.read_index_file()
+                    self.query_index_dict[table_name][attr_name] = I
             
     def find_best_index(self, table_name, attr_name):
         if table_name in self.master_index_dict:
@@ -513,15 +520,7 @@ class IndexManager:
         
         return None
             
-    def load_query_index_all(self, Q):
-        for table_name in self.query_index_dict:
-            for attr_name in self.query_index_dict[table_name]:
-                I = self.query_index_dict[table_name][attr_name]
-                if I != None:
-                    I.read_index_file()
-                    self.query_index_dict[table_name][attr_name] = I
 
-                    
 class Index:
     def __init__(self, table_name, attr_name, type):
         self.type = type

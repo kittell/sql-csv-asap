@@ -4,11 +4,13 @@ import csv
 import codecs
 import operator
 import string
+import time
 
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
 TESTMODE = True
+PAUSETIME = True
 
 def get_testmode():
     return TESTMODE
@@ -23,6 +25,24 @@ def test_print(caption, term):
             term = term.encode('ascii', 'ignore')
             print(caption, ' : ', term)
 
+def get_pausetime():
+    return PAUSETIME
+
+def pause_printtime(caption, previous_checkpoint_time):
+    """
+    DESCRIPTION: If PAUSETIME is set, pause the program and measure time between checkpoints
+    INPUT: 
+    OUTPUT: 
+    """
+    pause_time = time.time()
+    if PAUSETIME == True:
+        print('\n**PAUSETIME** ', caption, ':', pause_time - previous_checkpoint_time, 'seconds\n')
+    
+        input('Press enter to continue')
+        delay_time = time.time() - pause_time
+        return (pause_time + delay_time, time.time())
+    else:
+        return (pause_time, time.time())
 
 """DIRECTORY AND FILENAME METHODS
 """
