@@ -240,7 +240,7 @@ def filter_join_constraints(Q, I, filtered_dict_headers, filtered_dict):
                         csv_fullpath2 = table_to_csv_fullpath(table2)
                         f2 = open(csv_fullpath2, 'rb')
                         
-                        for c2 in q.join_constraints[table_pair]:
+                        for c2 in Q.join_constraints[table_pair]:
                             attr_name1 = parse_table_attribute_pair(Q.WHERE[c2]['Subject'])[1]
                             attr_index1 = get_attribute_index(combine_table_attribute_pair(table1, attr_name1), Q.attribute_dict)
                             attr_value1 = row1[attr_index1]
