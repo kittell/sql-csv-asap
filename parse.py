@@ -484,8 +484,25 @@ class Query:
         
         # List of available indexes for query
         self.index_list = get_query_index_list(self.query_table_list)
+        self.where_table_attribute_list = self.get_where_attribute_list()
+        
         
         self.show_parsed_query()
+    
+    def get_where_attribute_list(self):
+        # returns table_attr as table.attr
+        where_table_attr_list = []
+        for table_name in self.value_constraints:
+            for i in self.value_constraints[table_name]:
+                if self.WHERE[i]['Subject'] not in where_table_attr_list:
+                    where_table_attr_list.append(self.WHERE[i]['Subject'])
+        for table_name in self.join_constraints:
+            for i in self.join_constraints[table_name]:
+                if self.WHERE[i]['Subject'] not in where_table_attr_list:
+                    where_table_attr_list.append(self.WHERE[i]['Subject'])
+                if self.WHERE[i]['Object'] not in where_table_attr_list:
+                    where_table_attr_list.append(self.WHERE[i]['Object'])
+        return where_table_attr_list
     
     def show_parsed_query(self):
         print('SELECT:', self.SELECT)

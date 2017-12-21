@@ -44,6 +44,9 @@ def parse_index_filename(index_file):
         INPUT: string index_file: filename or fullpath of a file
         OUTPUT: list index_file_parts: [table_name, index_type, attr_name]
     """
+    # If the index_file comes in as a fullpath, remove the path from the basename
+    index_file = os.path.basename(index_file)
+    
     # Break it down.
     # The format is: TABLENAME__index-TYPE-ATTRIBUTE.txt
     index_file_parts = []
@@ -61,15 +64,15 @@ def parse_index_filename(index_file):
     # 4) Then split on double-underscore. 
     #       table_name is in position 0 after split. index-TYPE-ATTRIBUTE in position 1.
     index_file_split1 = index_file.split('__')
-    index_file_parts.append(index_file_split1[0])
+    table_name = index_file_split1[0]
 
     # 5) Split the second part on dash
     #       index_type is in position 1. attr_name is in position 2.
     index_file_split2 = index_file_split1[1].split('-')
-    index_file_parts.append(index_file_split2[1])
-    index_file_parts.append(index_file_split2[2])
+    index_type = index_file_split2[1]
+    attr_name = index_file_split2[2]
     
-    return index_file_parts
+    return (table_name, index_type, attr_name)
     
 def get_query_index_list(table_list):
     """GET_QUERY_INDEX_LIST
@@ -131,6 +134,76 @@ def get_index_list_all():
             index_dict[item] = get_index_list_table(item)
                 
     return index_dict
+
+def get_index_list_table2(table_name):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
+    # appends index fullpath to list for a single table
+    index_dict = {}
+    index_directory = get_index_directory(table_name)
+    for item in os.listdir(index_directory):
+        f = os.path.join(index_directory, item)
+        if is_index_file(f) == True:
+            index_file_parts = parse_index_filename(f)
+            attr_name = index_file_parts[2]
+            if attr_name not in index_dict:
+                index_dict[attr_name] = []
+            index_dict[attr_name].append(item)
+    return index_dict
+    
+def get_index_list_all2():
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: index_dict_all[table_name][attr_name]
+    """
+    # appends index filename (not path) to dict for all existing indexes
+    index_dict_all = {}
+    index_directory = get_index_directory()
+    
+    # 1) Walk through \indexes, gather directories as keys for index_dict_all
+    for item in os.listdir(index_directory):
+        f = os.path.join(index_directory, item)
+        if os.path.isdir(f) == True:
+#            if item not in index_dict_all:
+#                index_dict_all[item] = {}
+            index_dict_all[item] = {}
+
+    # For each table_name, get the index files in that directory
+    
+    # TODO: Would be better to not add blank entries to dict. In the meantime, delete at end.
+    delete_list = []
+    
+    for table_name in index_dict_all:
+        table_index_directory = os.path.join(index_directory, table_name)
+        for item in os.listdir(table_index_directory):
+            f = os.path.join(table_index_directory, item)
+            if is_index_file(f) == True:
+                index_dict = get_index_list_table2(table_name)
+                if len(index_dict) > 0:
+                    index_dict_all[table_name] = index_dict
+        if len(index_dict_all[table_name]) == 0:
+            delete_list.append(table_name)
+        
+    # Remove empty entries
+    for d in delete_list:
+        del index_dict_all[d]
+                    
+    return index_dict_all
+
+def get_index_fullpath(table_name, attr_name, type):
+    """
+        DESCRIPTION: 
+        INPUT: 
+        OUTPUT: 
+    """
+    index_directory = get_index_directory(table_name)
+    index_components = [table_name, '__index-', type, '-', attr_name, '.txt']
+    index_fullpath = os.path.join(index_directory, ''.join(index_components))
+    return index_fullpath
     
 def get_index_fullpath_keyword(table_name, keyword):
     """
@@ -138,10 +211,8 @@ def get_index_fullpath_keyword(table_name, keyword):
         INPUT: 
         OUTPUT: 
     """
-    index_directory = get_index_directory(table_name)
-    index_components = [table_name, '__index-keyword-', keyword, '.txt']
-    index_fullpath = os.path.join(index_directory, ''.join(index_components))
-    return index_fullpath
+    # TODO: Just keeping this one until I get rid of all references to it...
+    return get_index_fullpath(table_name, keyword, 'keyword')
     
     
 def write_index_file_keyword(table_name, keyword, index_results_dict):
@@ -387,3 +458,100 @@ def index_command_handler():
                 return cmd[index_command](index_command_list[2])
         else:
             return cmd[user_index_command]()
+
+class IndexManager:
+    def __init__(self):
+        # Read available indexes in /index/
+        self.master_index_dict = self.build_master_index_dict()
+        self.query_index_dict = {}
+        test_print('master_index_dict:',self.master_index_dict)
+    
+    def build_master_index_dict(self):
+        #dict[table][attr] = [Index_list]
+    
+        index_dict_all = get_index_list_all2()
+        master_index_dict = {}
+        for table_name in index_dict_all:
+            master_index_dict[table_name] = {}
+            for attr_name in index_dict_all[table_name]:
+                master_index_dict[table_name][attr_name] = []
+                for f in index_dict_all[table_name][attr_name]:
+                    index_type = parse_index_filename(f)[1]
+                    master_index_dict[table_name][attr_name].append(Index(table_name, attr_name, index_type))
+                    
+        return master_index_dict
+    
+    def set_query_index_list(self, Q):
+        return get_query_index_list(Q.table_list)
+        
+    def get_index_priority_list(self):
+        return ['query-filter', 'hash', 'keyword']
+        
+    def load_indexes(self, Q):
+        # for each index in query_index_list, pick the best one
+        index_dict = self.query_index_dict
+        for table_attr in Q.where_table_attribute_list:
+            (table_name, attr_name) = parse_table_attribute_pair(table_attr)
+            if table_name not in index_dict:
+                index_dict[table_name] = {}
+            if attr_name not in index_dict[table_name]:
+                index_dict[table_name][attr_name] = None
+            
+            index_dict[table_name][attr_name] = self.find_best_index(table_name, attr_name)
+        
+        test_print('load_indexes / index_dict',index_dict)
+        self.query_index_dict = index_dict
+        self.load_query_index_all(Q)
+            
+    def find_best_index(self, table_name, attr_name):
+        if table_name in self.master_index_dict:
+            if attr_name in self.master_index_dict[table_name]:
+                for i in self.master_index_dict[table_name][attr_name]:
+                    for p in self.get_index_priority_list():
+                        if i.type == p:
+                            return i
+        
+        return None
+            
+    def load_query_index_all(self, Q):
+        for table_name in self.query_index_dict:
+            for attr_name in self.query_index_dict[table_name]:
+                I = self.query_index_dict[table_name][attr_name]
+                if I != None:
+                    I.read_index_file()
+                    self.query_index_dict[table_name][attr_name] = I
+
+                    
+class Index:
+    def __init__(self, table_name, attr_name, type):
+        self.type = type
+        self.table_name = table_name
+        self.attr_name = attr_name
+        self.table_attr = combine_table_attribute_pair(table_name, attr_name)
+        self.filepath = get_index_fullpath(table_name, attr_name, type)
+        self.index_dict = {}
+    
+    def read_index_file(self):
+        # Build dict of index_entry:[byte_position_pointers]
+        index_results_dict = {}
+        f = open(self.filepath, 'r')
+        for line in f:
+            # get rid of newline
+            line = line.strip('\n')
+            
+            # split line over ':'
+            # first part is dict key, second part is list of byte position pointers
+            line_split = line.split(':')
+            k = line_split[0]
+            pointers = line_split[1].split(',')
+            if k not in index_results_dict:
+                index_results_dict[k] = pointers
+        f.close()
+        
+        self.index_dict = index_results_dict
+        
+class ByteList:
+    def __init__(self, table_name, type):
+        self.table = table
+        self.type = ''
+        self.positions = []

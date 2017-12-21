@@ -110,6 +110,9 @@ def cmd_sort():
     return True
 
 def cmd_query():
+    # Start up the IndexManager
+    I = IndexManager()
+    
     # Collect a query from the user.
     user_query = get_user_query()
     
@@ -120,8 +123,9 @@ def cmd_query():
         start_time = time.time()
         
         # Parse  Perform  Display results.
-        input_query = Query(user_query)
-        query_result_list = perform_query(input_query)
+        Q = Query(user_query)
+        I.load_indexes(Q)
+        query_result_list = perform_query(Q, I)
         display_query_result(query_result_list)
     
         # END TIMER - after displaying query
