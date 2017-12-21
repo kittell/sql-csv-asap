@@ -6,5 +6,13 @@ SELECT Name, Film, Award, director_name FROM oscars, movies WHERE Year = 2001 AN
 create index movies keyword movie_title
 SELECT Name, Award, director_name FROM oscars, movies WHERE Film = movie_title
 SELECT Name, Award, director_name FROM oscars, movies WHERE Year = 1999 AND Film = movie_title
+SELECT Name, Award, director_name, Year FROM oscars, movies WHERE Year = 1999 OR Year = 1980 AND Film = movie_title
+
+SELECT DISTINCT Name, Award, director_name, Year FROM oscars, movies WHERE Year = 1999 OR Year = 1980 AND Film = movie_title
+SELECT Name FROM oscars
+SELECT DISTINCT Name FROM oscars
+SELECT DISTINCT Name FROM oscars, movies WHERE Name = actor_1_name
+
+SELECT Name, Award, director_name, Year FROM oscars, movies WHERE Year = 1980 AND Film = movie_title
 
 SELECT B1.Name, B2.Name FROM BostonMarathon2016 B1, BostonMarathon2017 B2 WHERE B1.Name = B2.Name

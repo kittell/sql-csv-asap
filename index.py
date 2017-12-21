@@ -276,15 +276,129 @@ def read_index_file_keyword(table_name, keyword):
     
     return index_results_dict
 
-def zero_pass_query(table_name, q):
-    """ZERO_PASS_QUERY
-        DESCRIPTION: See if all attributes in WHERE clause for a given table_name are
-            covered by an index. If this is true, then a query can be performed without
-            scanning an entire table, just by going to particular bytes in a file.
-        INPUT: 
-        OUTPUT: 
+def value_constraint_has_index(q, table_name):
+    result = False
+    # Loop through value_constraints, find a matching table.attr index file
+    if table_name in q.value_constraints:
+        for c in q.value_constraints[table_name]:
+            ta = q.WHERE[c]['Subject']
+            ta_split = parse_table_attribute_pair(ta)
+            if table_name == ta_split[0]:
+                # now see if there's an index corresponding to an attribute
+                if exists_index_file_keyword(ta_split[0], ta_split[1]) == True:
+                    return True
+    
+    return result
+
+def join_constraint_has_index(q, table_name='', attr_name=''):
+    # Loop through value_constraints, find a matching table.attr index file
+    if exists_index_file_keyword(table_name, attr_name) == True:
+        return True
+    
+    return False
+
+def get_single_byte_list(Q, I, table_name, c):
+    # c is constraint number in WHERE clause
+    
+    byte_list = []
+    ta = Q.WHERE[c]['Subject']
+    ta_split = parse_table_attribute_pair(ta)
+    if table_name == ta_split[0]:
+        # now see if there's an index corresponding to an attribute
+        attr_name = ta_split[1]
+
+        if table_name in I.query_index_dict:
+            if attr_name in I.query_index_dict[table_name]:
+            
+                # TODO: there has to be a better way to reference an index..........
+                index = I.query_index_dict[table_name][attr_name].index_dict
+                obj = Q.WHERE[c]['Object']
+                op = Q.WHERE[c]['Verb']
+
+                for attr_value in index:
+                    if eval_binary_comparison(attr_value, op, obj) == True:
+                        for i in index[attr_value]:
+                            try:
+                                byte_list.append(int(i))
+                            except:
+                                continue
+    
+    return byte_list
+    
+def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
     """
-    pass
+    DESCRIPTION: Return a list of byte position numbers from an index for table_name.
+    INPUT: 
+        - Query Q:
+        - string table_name:
+        - string attr_name: Name of attribute to find an index for. Should be empty for
+            value_constraint index in order to find constraints for all attributes in 
+            table. Should have a value for finding index on joins because that will be
+            the specific joining attribute to find an index for.
+        - string attr_value: 
+    OUTPUT: list index_byte_list: list containing byte positions in table_name that 
+        correspond to index values.
+    """
+    # TODO: Limitation: only can handle one condition from WHERE. Should consider the effects
+    #   of multiple conditions. Especially OR, because it will leave some behind...
+    # TODO: What happens if this returns an empty list? Should there be a different signal
+    #   that is returned if the index value isn't found in the index?
+    full_byte_list = []
+    
+    if attr_name == '' and attr_value == '':
+        # Case 1: value_constraints. attr_name and attr_value are empty. Find all indexes
+        #   for table_name.
+        if table_name in Q.value_constraints:
+            # If table_name is there, then there is at least one value_constraint
+            full_byte_list = get_single_byte_list(Q, I, table_name, 0)
+            
+#            test_print('get_index_byte_list / full_byte_list / initial:', full_byte_list)
+            
+            # If there are more than one value_constraint on this table, type to merge them
+            for i in range(1,len(Q.value_constraints[table_name])):
+                c = Q.value_constraints[table_name][i]
+                this_byte_list = get_single_byte_list(Q, I, table_name, c)
+                temp_byte_list = []     # hold the temporary result
+                
+                # Connect the two constraints using the boolean connector on the second one
+                operator = Q.WHERE[c]['Connector']
+                if operator == 'OR':
+                    temp_byte_list = full_byte_list
+                    for b in this_byte_list:
+                        if b not in temp_byte_list:
+                            temp_byte_list.append(b)
+                elif operator == 'AND':
+                    for b in this_byte_list:
+                        if b in full_byte_list:
+                            temp_byte_list.append(b)
+                elif operator == 'NOT':
+                    for b in this_byte_list:
+                        if b not in full_byte_list:
+                            temp_byte_list.append(b)
+                
+                # Replace full_byte_list with new list, temp_byte_list
+                full_byte_list = temp_byte_list
+#                test_print('get_index_byte_list / temp_byte_list:', temp_byte_list)
+
+    else:
+        # Case 2: join_constraints. attr_name and attr_value have values.
+        # TODO: This is constrainted to using keyword index, should be general...
+        if exists_index_file_keyword(table_name, attr_name) == True:
+            #index = read_index_file_keyword(table_name, attr_name)
+            # TODO: there has to be a better way to reference an index..........
+            index = I.query_index_dict[table_name][attr_name].index_dict
+            if attr_value in index:
+                for i in index[attr_value]:
+                    try:
+                        full_byte_list.append(int(i))
+                    except:
+                        continue
+
+#    test_print('get_index_byte_list / full_byte_list / final:', full_byte_list)
+
+    # Not sure 
+    return full_byte_list
+    
 
 """INDEX COMMAND HANDLERS
 """
@@ -345,7 +459,7 @@ def cmd_index_create_keyword(table_name, keyword):
     
     csv_fullpath = table_to_csv_fullpath(table_name)
     attribute_list = get_attribute_list(csv_fullpath)
-    attribute_dict = get_attribute_dict2([table_name])
+    attribute_dict = get_attribute_dict([table_name])
     
     # get index # in attribute_list of keyword
     ta = combine_table_attribute_pair(table_name, keyword)
@@ -533,7 +647,7 @@ class Index:
     def read_index_file(self):
         # Build dict of index_entry:[byte_position_pointers]
         index_results_dict = {}
-        f = open(self.filepath, 'r')
+        f = open(self.filepath, 'r', encoding='utf-8')
         for line in f:
             # get rid of newline
             line = line.strip('\n')
