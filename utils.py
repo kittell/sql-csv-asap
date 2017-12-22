@@ -10,7 +10,7 @@ import sys
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = True
+TESTMODE = False
 PAUSETIME = False
 
 def get_testmode():
@@ -23,7 +23,7 @@ def test_print(caption, term):
         try:
             print(caption, ' : ', term)
         except UnicodeEncodeError:
-            term = term.encode('ascii', 'ignore')
+            term = term.encode(sys.stdout.encoding)
             print(caption, ' : ', term)
 
 def get_pausetime():
@@ -44,6 +44,9 @@ def pause_printtime(caption, previous_checkpoint_time):
         return (pause_time + delay_time, time.time())
     else:
         return (pause_time, time.time())
+
+def test_size(a):
+    return sys.getsizeof(a)
 
 """DIRECTORY AND FILENAME METHODS
 """

@@ -19,9 +19,13 @@ def get_connector_list():
     return ['AND', 'OR', 'NOT']
     
 def get_verb_list():
-    # List of operators
+    # List of relationships for WHERE terms
     # Order is kind of important - want NOT LIKE before LIKE
     return ['NOT LIKE', 'LIKE', '=', '<>', '<', '<=', '>', '>=']
+    
+def get_operator_list():
+    # List of operators for WHERE terms
+    return ['+', '-', '/', '*']
     
     
 def get_raw_query_table_list(raw_query):
@@ -433,7 +437,20 @@ def parse_where(raw_query, alias_dict={}):
             if where_list[w]['Object'] == '':
                 where_list[w]['Object'] = initial_where_list[i]
             else:
-                where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
+                # If Object isn't empty, and a math operator shows up -- special case
+                if initial_where_list[i] in get_operator_list():
+                    where_list[w]['Operator'] = initial_where_list[i]
+                elif 'Operator' in where_list[w]:
+                    # Operator term exists, expecting next term to be a number
+                    # TODO: should check that, eh?
+                    where_list[w]['Operand'] = initial_where_list[i]
+                else:
+                    # Keep adding terms to Object
+                    where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
+            
+    # Remove single-quotes from beginning and ending of WHERE Object terms
+    for w in range(len(where_list)):
+        where_list[w]['Object'] = where_list[w]['Object'].strip("'")
             
     # Replace all attribute names with table.attribute
     table_list = get_raw_query_table_list(raw_query)
@@ -502,7 +519,7 @@ class Query:
         
         self.get_query_table_list()
         self.attribute_dict = get_attribute_dict(self.table_list)
-
+        
         # List of available indexes for query
         self.index_list = get_query_index_list(self.table_list)
         self.get_where_table_attr_list()
@@ -587,4 +604,3 @@ class Query:
 
         test_print('prepared_user_input', self.prepared_user_input)
         test_print('table_list', self.table_list)
-        test_print('index_list', self.index_list)

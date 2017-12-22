@@ -20,6 +20,8 @@ def perform_query(Q, I):
 
     R = ResultsManager()
     
+    (start_time, checkpoint_time) = pause_printtime('let\'s get started:', checkpoint_time)
+    
     # For each table, get the results filtered by value_constraints in the WHERE clause
     filter_value_constraints(Q, I, R)
     (start_time, checkpoint_time) = pause_printtime('filter_value_constraints:', checkpoint_time)
@@ -71,7 +73,7 @@ def filter_join_constraints(Q, I, R):
     for table1 in table1_list:
     
         # Get (a) filtered byte_list or (b) index byte_list or (c) need to table scan
-        has_index1 = value_constraint_has_index(Q, table1)
+        has_index1 = value_constraint_has_index(Q, I, table1)
         has_filter1 = False
         if table1 in R.filtered_results_dict:
             if R.filtered_results_dict[table1] != None:
@@ -278,10 +280,14 @@ def filter_value_constraints(Q, I, R):
             R.filtered_headers_dict[table] = project_row(Q, table, 'header')
             
             # Get index byte_list for this table, if it exists.
-            has_index = value_constraint_has_index(Q, table)
+            # TODO: replace this w/ IndexManager info
+            has_index = value_constraint_has_index(Q, I, table)
+            
             byte_list = []
             if has_index == True:
                 byte_list = get_index_byte_list(Q, I, table)
+            
+            test_print('filter_value_constraints / set up byte_list', (table, 'has_index:',has_index, len(byte_list)))
             
             # Open the table file for reading
             csv_fullpath = table_to_csv_fullpath(table)
@@ -385,9 +391,11 @@ def combine_final_results(Q, R):
         # e.g., for a three table join, need to match b2 of R.join_dict[(table1,table2)] = (b1,b2)
         # with b2 of R.join_dict[(table2,table3)] = (b2,b3)
         # End result will be list of (b1,b2,b3) from which to gather data from R.filtered_results_dict
-
+        
+        (start_time, checkpoint_time) = pause_printtime('combine_final_results / start:', checkpoint_time)
+        
         final_join_results = []
-        # join_table_list will indicate which columns in final_join_results are which tables
+        # join_table_list is a map to table headers
         join_table_list = []
         for (table1, table2) in Q.join_constraints:
             if table1 not in join_table_list:
@@ -395,8 +403,14 @@ def combine_final_results(Q, R):
             if table2 not in join_table_list:
                 join_table_list.append(table2)
         
+        (start_time, checkpoint_time) = pause_printtime('combine_final_results / set up join_table_list:', checkpoint_time)
+        
         n_join_tables = len(join_table_list)
+        joined_tables = []
         for (table1, table2) in R.join_dict:
+            (start_time, checkpoint_time) = pause_printtime(('combine_final_results / final_join_results append:', table1, table2), checkpoint_time)
+
+            
             # Get position of table1, table2 in join_table_list
             for t in range(len(join_table_list)):
                 if table1 == join_table_list[t]:
@@ -410,6 +424,7 @@ def combine_final_results(Q, R):
             if len(final_join_results) == 0:
                 join_results_empty = True
 
+            new_final_join_results = []
             for (b1, b2) in R.join_dict[(table1, table2)]:
                 # Initialize int_result to length of number of tables to join
                 if join_results_empty == True:
@@ -417,64 +432,78 @@ def combine_final_results(Q, R):
                     new_row = [None] * n_join_tables
                     new_row[pos_b1] = b1
                     new_row[pos_b2] = b2
-                    final_join_results.append(new_row)
+                    new_final_join_results.append(new_row)
 
                 else:
+                    
                     for row in range(len(final_join_results)):
                         # Match b1 in row
                         #   If position is None, add b2 to it
                         #   Else if position is filled with a value different than b2:
-                        #       add a new row with b1 and b2 (and rest None)
+                        #       add a new row with b1 and b2
                         # Match b2...
                         
-                        for i in range(2):
-                            # Flip b1 and b2 w/o rewriting the uglier code block
-                            if i == 0:
-                                i1 = b1; pos_i1 = pos_b1
-                                i2 = b2; pos_i2 = pos_b2
+                        if final_join_results[row][pos_b1] == b1:
+                            if final_join_results[row][pos_b2] == None:
+                                # Add b2 to an empty place
+                                new_row = final_join_results[row]
+                                new_row[pos_b2] = b2
+                                new_final_join_results.append(new_row)
+                            elif final_join_results[row][pos_b2] != b2:
+                                # Multiple b1 matches, add a new row
+                                new_final_join_results.append(final_join_results[row])
+                                new_row = final_join_results[row]
+                                new_row[pos_b1] = b1
+                                new_row[pos_b2] = b2
+                                new_final_join_results.append(new_row)
                             else:
-                                i1 = b2; pos_i1 = pos_b2
-                                i2 = b1; pos_i2 = pos_b1
-                                
-                            if final_join_results[row][pos_i1] == i1:
-                                if final_join_results[row][pos_i2] == None:
-                                    final_join_results[row][pos_i2] = i2
-                                elif final_join_results[row][pos_i2] != i2:
-                                    new_row = [None] * n_join_tables
-                                    new_row[pos_i1] = i1
-                                    new_row[pos_i2] = i2
-                                    final_join_results.append(new_row)
+                                new_final_join_results.append(final_join_results[row])
+                        if final_join_results[row][pos_b2] == b2:
+                            if final_join_results[row][pos_b1] == None:
+                                # Add b2 to an empty place
+                                new_row = final_join_results[row]
+                                new_row[pos_b1] = b1
+                                new_final_join_results.append(new_row)
+                            elif final_join_results[row][pos_b1] != b1:
+                                # Multiple b1 matches, add a new row
+                                new_final_join_results.append(final_join_results[row])
+                                new_row = final_join_results[row]
+                                new_row[pos_b2] = b2
+                                new_row[pos_b1] = b1
+                                new_final_join_results.append(new_row)
+                            else:
+                                new_final_join_results.append(final_join_results[row])
 
+            final_join_results = new_final_join_results
+                        # TODO: this messes up the ordering - it should come after
+                        # the row it was based on
+                        #for new_row in new_final_join_results:
+                            #final_join_results.append(new_final_join_results)
+
+                
+            # Clear up some space -- not using R.join_dict(table1, table2) anymore
+            #R.join_dict[(table1, table2)] = []
+
+        test_print('final_join_results length', len(final_join_results))
         (start_time, checkpoint_time) = pause_printtime('combine_final_results / matching:', checkpoint_time)
 
         # After all matching is done, remove any row in final_join_results containing None
-        for row in reversed(range(len(final_join_results))):
+        new_final_join_results = []
+        for row in range(len(final_join_results)):
+            none_row = False
             for i in final_join_results[row]:
                 if i == None:
-                    del final_join_results[row]
+                    none_row = True
                     break
+            if none_row == False:
+                new_final_join_results.append(final_join_results[row])
+        final_join_results = new_final_join_results
 
 #        test_print('final_join_results',final_join_results)
         
         # Get values for the byte positions from R.filtered_results_dict
-        
-        if get_pausetime() == True:
-            next_percent = 1.0
-            prev_checkpoint_time = checkpoint_time
-        
         # Loop through all rows in final_join_results. Turn the byte numbers into data.
         for row in range(len(final_join_results)):
-            if get_pausetime() == True:
-                total_rows = len(final_join_results)
-                checkpoint_time = time.time()
-                print_this_round = False
-                if round(100* row/total_rows, 1) == next_percent:
-                    print_this_round = True
-                if print_this_round == True:
-                    next_percent +=1
-                    print ('row:', row, checkpoint_time - prev_checkpoint_time)
-                    prev_checkpoint_time = checkpoint_time
-                
             # Loop through each table.attr in the SELECT clause.
             # Map byte number from final_join_results to table.attr in SELECT to data
             row_results = []
@@ -496,10 +525,6 @@ def combine_final_results(Q, R):
                             # TODO: would be faster if there was a m
                             row_results.append(R.filtered_results_dict[table][b][j])
                             break
-
-#                    if get_pausetime() == True:
-#                        if print_this_round == True:
-#                            print('j:',j,':',time.time()-checkpoint_time)
 
             if len(row_results) > 0:
                 combined_results.append(row_results)
