@@ -10,7 +10,7 @@ import sys
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = False
+TESTMODE = True
 PAUSETIME = False
 
 def get_testmode():
@@ -262,13 +262,19 @@ def eval_binary_comparison(a, op, b):
         
         if type_a != 'bool' and type_b != 'bool':
             a = int(a)
+            if b == '':
+                b = 0
             b = int(b)
-            
     except:
         # OK, it's a string then
         pass
     
-    result = ops[op](a, b)
+#    test_print('eval',(a, op, b))
+    try:
+        result = ops[op](a, b)
+    except TypeError:
+        return False
+        
     return result
 
 

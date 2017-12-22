@@ -1,0 +1,77 @@
+SELECT B.Name, B.State FROM BostonMarathon2017 B WHERE Country = USA AND State NOT LIKE M%
+
+SELECT B.Name FROM BostonMarathon2017 B WHERE State = IL
+create index BostonMarathon2017 keyword State
+
+
+SELECT B1.Name, B1.Country, B1.State FROM BostonMarathon2016 B1, BostonMarathon2017 B2 WHERE B1.Name = B2.Name AND B1.Country = USA
+
+
+SELECT Name, Year, Winner FROM oscars WHERE Year = 2013 AND Winner = 1
+SELECT Year, Film, Name, Winner FROM oscars WHERE Name LIKE %Pitt%
+
+create index movies keyword director_name
+SELECT Year, Film, Name FROM oscars, movies WHERE oscars.Name = movies.director_name
+SELECT Year, Film, Name FROM oscars, movies WHERE Year = 1997 AND oscars.Name = movies.director_name
+
+create index oscars keyword Award
+
+SELECT Year, Film, Name FROM oscars WHERE Award = Best Picture AND Winner = 1
+SELECT Year, Film, director_name FROM oscars, movies WHERE oscars.Award = Best Picture AND oscars.Winner = 1 AND Year = 1979 OR Year = 1999 AND oscars.Film = movies.movie_title
+SELECT movie_title, director_name FROM movies WHERE title_year = 2000
+SELECT Film FROM oscars WHERE Year = 2000 AND Winner = 1 AND Film <>
+SELECT Film, Name FROM oscars WHERE Year = 2000 AND Winner = 1 AND Film <>
+SELECT Film FROM oscars, movies WHERE Year = 2000 AND Winner = 1 AND Film = movie_title
+SELECT Film, Award, director_name, Year FROM oscars, movies WHERE Year = 2000 AND Winner = 1 AND Film = movie_title AND Film <>
+
+SELECT DISTINCT Year, Film, movie_title, title_year, director_name, Award FROM oscars, movies WHERE Name = director_name AND Year > title_year + 5 AND Winner = 1
+SELECT Year, Film, director_name, Award FROM oscars, movies WHERE Name = director_name AND Year > title_year + 5 AND Winner = 1
+
+
+SELECT Year, title_year, Film, director_name, Award FROM oscars, movies WHERE oscars.Winner = 1 AND Year > 2000 AND oscars.Film = movies.movie_title
+
+
+SELECT business_id, stars FROM review-5k WHERE date = 2015-04-04
+SELECT B.name, city, R.stars FROM business B, review-500k R WHERE R.business_id = B.business_id AND date = 2006-09-01
+SELECT B.name, city, R.stars FROM business B, review R WHERE R.business_id = B.business_id AND date = 2006-09-01
+SELECT B.name, city, R.stars FROM business B, review-500k R WHERE city = Champaign AND B.business_id = R.business_id
+SELECT B.name, city, R.date, R.stars FROM business B, review R WHERE city = Champaign AND B.business_id = R.business_id AND B.stars > 4.8
+SELECT name, city, review_count FROM business WHERE city = Champaign AND categories LIKE %Restaurant% AND review_count > 400
+SELECT * FROM review-5k R WHERE date < 2007-09-01
+SELECT * FROM review R WHERE date < 2005-01-01
+SELECT B.name, R.stars FROM business B, review R WHERE R.business_id = B.business_id AND date < 2005-01-24
+SELECT B.name, B.stars, B.review_count FROM business B WHERE review_count > 4000
+SELECT B.name, B.stars, B.review_count FROM business B WHERE review_count > 4000 ORDER BY review_count
+
+
+
+
+
+SELECT name, city, state, review_count FROM business WHERE city = Champaign
+SELECT name, city, state, review_count FROM business WHERE city = Champaign AND review_count > 300
+
+
+
+
+
+Type 1
+SELECT R.review_id, R.stars, R.useful FROM review-1m.csv R WHERE R.stars >= 4 AND R.useful > 20
+ 
+ 
+Type 2
+SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business.csv B JOIN review-1m.csv R ON (B.business_id = R.business_id) WHERE B.city = 'Champaign' AND B.state = 'IL'
+ 
+ 
+Type 3
+SELECT DISTINCT B.name FROM business.csv B JOIN review-1m.csv R JOIN photos.csv P ON (B.business_id = R.business_id AND B.business_id = P.business_id) WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside'
+
+
+
+SELECT R.review_id, R.stars, R.useful FROM review-1m R WHERE R.stars >= 4 AND R.useful > 20
+
+
+SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business B, review-1m R WHERE B.city = Champaign AND B.state = IL AND B.business_id = R.business_id
+
+
+
+SELECT DISTINCT B.name FROM business B, review-1m R, photos P WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id

@@ -77,6 +77,7 @@ def filter_join_constraints(Q, I, R):
         has_filter1 = False
         if table1 in R.filtered_results_dict:
             if R.filtered_results_dict[table1] != None:
+                test_print('filter_join_constraints / has_filter',table1)
                 # So: Table1 was filtered, returned no results (if None, not filtered)
                 has_filter1 = True
         else:
@@ -91,14 +92,13 @@ def filter_join_constraints(Q, I, R):
             byte_list1 = []
             for b in R.filtered_results_dict[table1]:
                 byte_list1.append(b)
+            test_print('filter_join_constraints / has_filter1 / byte_list1 len', (table1, len(byte_list1)))
         elif has_index1 == True:
             # Case b: No filter, but there is an index for this table. Use byte positions from index.
             byte_list1 = []
             byte_list1 = get_index_byte_list(Q, I, table1)
         # Case c: If byte_list1 is still None at this point, need to do a table scan on table1
         
-#        test_print('byte_list1:',byte_list1)
-
         # Loop over table1
         csv_fullpath1 = table_to_csv_fullpath(table1)
         f1 = open(csv_fullpath1, 'rb')
@@ -106,6 +106,7 @@ def filter_join_constraints(Q, I, R):
         i1 = 0
 
         while True:
+            print(b1)
             # Determine the next byte position b1 to go to in f1
             if byte_list1 != None:
                 if len(byte_list1) == 0:
@@ -116,6 +117,8 @@ def filter_join_constraints(Q, I, R):
                     # Retrieve next byte position from byte list, if filter or index is available
                     b1 = byte_list1[i1]
                     i1 += 1
+                    # Remove from byte_list - done using it
+                    byte_list1.remove(b1)
             else:
                 # (c) table scan
                 pass
@@ -123,6 +126,9 @@ def filter_join_constraints(Q, I, R):
             # Return the line from position b1 in the file
             f1.seek(b1)
             (b1_returned, line1) = readline_like_csv(f1)
+            
+            test_print('b1:',b1)
+            test_print('b1_returned:',b1_returned)
         
             # Line will read empty at end of file
             if not line1:
@@ -133,6 +139,7 @@ def filter_join_constraints(Q, I, R):
                 for row1 in csv.reader([line1]):
                     # Search for various table1-table 2 join constraints
                     for table_pair in Q.join_constraints:
+                        test_print('table_pair',table_pair)
                         # Only check constraints where table1 is the first table
                         if table_pair[0] != table1:
                             continue
@@ -149,6 +156,7 @@ def filter_join_constraints(Q, I, R):
                                 # This will return false if R.filtered_results_dict[table2] is an empty dict
                                 # So: Table1 was filtered, returned no results (if None, not filtered)
                                 has_filter2 = True
+                                test_print('filter_join_constraints / has_filter2', has_filter2)
 
                         else:
                             if table2 not in new_filtered_dict:
@@ -174,11 +182,13 @@ def filter_join_constraints(Q, I, R):
                                 byte_list2 = []
                                 for b in R.filtered_results_dict[table2]:
                                     byte_list2.append(b)
+                                test_print('filter_join_constraints / filter / byte_list2 / len', len(byte_list2))
                             elif has_index2 == True:
                                 # Case b: No filter, but there is an index for this table.
                                 # Use byte positions from index for attr_name2 and attr_value1 (yes, attr_value2 is based on attr_value1)
 #                                print('has_index2')
                                 byte_list2 = get_index_byte_list(Q, I, table2, attr_name2, attr_value1)
+                                test_print('filter_join_constraints / index / byte_list2 / len', len(byte_list2))
 #                                printstring = 'index / byte_list2:' + attr_name2 + attr_value1
 #                                print(printstring)
 #                                print(byte_list2)
@@ -204,15 +214,19 @@ def filter_join_constraints(Q, I, R):
                                         # Retrieve next byte position from byte list, if filter or index is available
                                         b2 = byte_list2[i2]
                                         i2 += 1
+                                        # Remove from byte_list - done using it
+                                        byte_list2.remove(b2)
+                                        
                                 else:
                                     # (c) table scan
                                     pass
-                    
+                                                                
                                 # Return the line from position b2 in the file
                                 f2.seek(b2)
                                 (b2_returned, line2) = readline_like_csv(f2)
                                 
-#                                print('seek(b2) byte_list2:',byte_list2)
+#                                test_print('b2:',b2)
+#                                test_print('b2_returned:',b2_returned)
                                 
                                 # Line will read empty at end of file for table scan
                                 if not line2:
@@ -222,6 +236,7 @@ def filter_join_constraints(Q, I, R):
                                 if b2 > 0 and line2 != '':
                                     for row2 in csv.reader([line2]):
                                         if compare_join_constraints(Q, table1, row1, table2, row2) == True:
+                                            test_print('filter_join_constraints / compare_join_constraints', (table1, b1, table2, b2))
                                             # row1-row2 passes join constraints. Capture the results.
                                             R.join_dict[table_pair].append((b1, b2))
                                             
@@ -285,9 +300,8 @@ def filter_value_constraints(Q, I, R):
             
             byte_list = []
             if has_index == True:
+                test_print('filter_value_constraints / has_index',table)
                 byte_list = get_index_byte_list(Q, I, table)
-            
-            test_print('filter_value_constraints / set up byte_list', (table, 'has_index:',has_index, len(byte_list)))
             
             # Open the table file for reading
             csv_fullpath = table_to_csv_fullpath(table)
@@ -390,7 +404,7 @@ def combine_final_results(Q, R):
         #       Search out matching results in other R.join_dict[(table,table)] pairs
         # e.g., for a three table join, need to match b2 of R.join_dict[(table1,table2)] = (b1,b2)
         # with b2 of R.join_dict[(table2,table3)] = (b2,b3)
-        # End result will be list of (b1,b2,b3) from which to gather data from R.filtered_results_dict
+        # End result will be list of [b1,b2,b3] from which to gather data from R.filtered_results_dict
         
         (start_time, checkpoint_time) = pause_printtime('combine_final_results / start:', checkpoint_time)
         
@@ -599,12 +613,13 @@ def test_value_constraints(table, row, q):
                 constraints_list.append(q.WHERE[i]['Connector'])
         
             ta = parse_table_attribute_pair(q.WHERE[i]['Subject'])
-            subj_index = get_attribute_index(ta, q.attribute_dict)
+            attr_index = get_attribute_index(ta, q.attribute_dict)
+            attr_value = row[attr_index]
             op = q.WHERE[i]['Verb']
             obj = q.WHERE[i]['Object']
             
             # Append result
-            constraints_list.append(eval_binary_comparison(row[subj_index], op, obj))
+            constraints_list.append(eval_binary_comparison(attr_value, op, obj))
                 
 #        test_print('\ntest_value_constrants / constraints_list',(constraints_list, q.value_constraints))
         
@@ -625,7 +640,7 @@ def test_value_constraints(table, row, q):
     
     return result
 
-def get_individual_join_constraint_results(q, table1, row1, table2, row2):
+def get_individual_join_constraint_results(Q, table1, row1, table2, row2):
     """GET_INDIVIDUAL_JOIN_CONSTRAINT_RESULTS
         DESCRIPTION: For a given table1 and table2, find join constraints from the WHERE
             clause of the user query that involve table1 on left side and table 2 on right side.
@@ -636,24 +651,74 @@ def get_individual_join_constraint_results(q, table1, row1, table2, row2):
         OUTPUT: list constraints_list: 
     """
     constraint_results = []
-    for i in q.join_constraints[table1, table2]:
+    for i in Q.join_constraints[table1, table2]:
         # Found a pair of tables in join_constraints. Because there may be multiple join
         # constraints for a table1-table2 pair, parse all join_constraints for this pair
         # into a single list built for comparison.
 
         # A connector is a boolean operator like AND that links multiple constraints.
         # The first one is always an empty string.
-        constraint_results.append(q.WHERE[i]['Connector'])
+        constraint_results.append(Q.WHERE[i]['Connector'])
 
-        table_attr1 = q.WHERE[i]['Subject']
-        attr_index1 = get_attribute_index(table_attr1, q.attribute_dict)
+        table_attr1 = Q.WHERE[i]['Subject']
+        attr_index1 = get_attribute_index(table_attr1, Q.attribute_dict)
         attr_value1 = row1[attr_index1]
         
-        operator = q.WHERE[i]['Verb']
+        operator = Q.WHERE[i]['Verb']
         
-        table_attr2 = q.WHERE[i]['Object']
-        attr_index2 = get_attribute_index(table_attr2, q.attribute_dict)
+        table_attr2 = Q.WHERE[i]['Object']
+        attr_index2 = get_attribute_index(table_attr2, Q.attribute_dict)
         attr_value2 = row2[attr_index2]
+        
+        # Case for arithmetic in join
+        no_compare = False
+        if 'Operator' in Q.WHERE[i] and 'Operand' in Q.WHERE[i]:
+            if attr_value1 != '' and attr_value2 != '':
+                # TODO: sort this out better, like eval_binary_comparison
+                math_operator = Q.WHERE[i]['Operator']
+                operand = int(Q.WHERE[i]['Operand'])
+                
+                try:
+                    
+                    attr_value1 = int(attr_value1)
+                except ValueError:
+                    if attr_value1.strip('0123456789') == '.':
+                        attr_value1 = float(attr_value1)
+                    else:
+                        no_compare = True
+                
+                try:
+                    
+                    attr_value2 = int(attr_value2)
+                except ValueError:
+                    if attr_value2.strip('0123456789') == '.':
+                        attr_value2 = float(attr_value2)
+                    else:
+                        no_compare = True
+            
+                try:
+                    
+                    operand = int(operand)
+                except ValueError:
+                    if operand.strip('0123456789') == '.':
+                        operand = float(operand)
+                    else:
+                        no_compare = True
+
+                if no_compare == False:
+                    if math_operator == '+':
+                        attr_value2 += operand
+                    if math_operator == '-':
+                        attr_value2 -= operand
+                    if math_operator == '*':
+                        attr_value2 *= operand
+                    if math_operator == '/':
+                        attr_value2 /= operand
+#                    print('math:',attr_value2)
+                    
+#                print('attr_value1:',attr_value1, type(attr_value1))
+#                print('operand:',operand, type(operand))
+#                print('attr_value2:',attr_value2, type(attr_value2))
 
 #        print('attr_name1:',q.attribute_dict[table1][attr_index1],'|','attr_value1:',row1[attr_index1])
 #        print('attr_name2:',q.attribute_dict[table2][attr_index2],'|','attr_value2:',row2[attr_index2])
@@ -663,7 +728,7 @@ def get_individual_join_constraint_results(q, table1, row1, table2, row2):
         
     return constraint_results
 
-def compare_join_constraints(q, table1, row1, table2, row2):
+def compare_join_constraints(Q, table1, row1, table2, row2):
     """COMPARE_JOIN_CONSTRAINTS
         DESCRIPTION: Handles the comparison of join constraints on a given table1-table2 pair.
             If there is only one join constraint, it returns the result. If there are more
@@ -679,7 +744,7 @@ def compare_join_constraints(q, table1, row1, table2, row2):
     # only need to do extra processing if there are multiple WHERE conditions to combine.
     #TODO: need to do some grouping when doing an OR compare on the same attribute
     
-    constraint_results = get_individual_join_constraint_results(q, table1, row1, table2, row2)
+    constraint_results = get_individual_join_constraint_results(Q, table1, row1, table2, row2)
 
     if len(constraint_results) == 0:
         # If no constraints, result is pass/True (as in, it doesn't fail anything.)
@@ -703,6 +768,7 @@ def compare_join_constraints(q, table1, row1, table2, row2):
                 result = eval_binary_comparison(a, op, b)
     return result
 
+            
 
     
 class ResultsManager:
@@ -711,3 +777,5 @@ class ResultsManager:
         self.filtered_headers_dict = {}
         self.filtered_results_dict = {}
         self.join_dict = {}
+        self.zeropass_fitered_results_dict = {}
+        self.zeropass_join_dict = {}
