@@ -307,6 +307,7 @@ def join_constraint_has_index(q, table_name='', attr_name=''):
         return True
     
     return False
+    
 
 def get_single_byte_list(Q, I, table_name, c):
     # c is constraint number in WHERE clause
@@ -424,6 +425,7 @@ def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
                             continue
         else:
             return None
+
 
 #    test_print('get_index_byte_list / full_byte_list / final:', full_byte_list)
 
@@ -610,6 +612,7 @@ class IndexManager:
         self.master_index_dict = self.build_master_index_dict()
         self.query_index_dict = {}
         test_print('master_index_dict:',self.master_index_dict)
+        self.zeropass_byte_list = {}
     
     def build_master_index_dict(self):
         #dict[table][attr] = [Index_list]
@@ -647,6 +650,8 @@ class IndexManager:
         test_print('load_indexes / index_dict',index_dict)
         
         self.query_index_dict = index_dict
+        self.full_query_index()
+        test_print('load_indexes / full_query_index',self.full_index)
         
         for table_name in self.query_index_dict:
             for attr_name in self.query_index_dict[table_name]:
@@ -654,6 +659,8 @@ class IndexManager:
                 if I != None:
                     I.read_index_file()
                     self.query_index_dict[table_name][attr_name] = I
+
+
             
     def find_best_index(self, table_name, attr_name):
         if table_name in self.master_index_dict:
@@ -665,6 +672,12 @@ class IndexManager:
         
         return None
             
+    def full_query_index(self):
+        for table_name in self.query_index_dict:
+            for attr_name in self.query_index_dict[table_name]:
+                if self.query_index_dict[table_name][attr_name] == None:
+                    self.full_index = False
+        self.full_index = True
 
 class Index:
     def __init__(self, table_name, attr_name, type):

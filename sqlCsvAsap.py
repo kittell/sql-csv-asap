@@ -98,7 +98,7 @@ def cmd_help():
 def cmd_quit():
     # Do nothing. Return False. This will cause the main loop to exit.
     
-    print('\n***Goodbye***\n')
+    print('\n\n***Goodbye***\n\n')
     return False
 
 def cmd_index():
