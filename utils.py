@@ -4,11 +4,14 @@ import csv
 import codecs
 import operator
 import string
+import time
+import sys
 
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = True
+TESTMODE = False
+PAUSETIME = False
 
 def get_testmode():
     return TESTMODE
@@ -20,9 +23,30 @@ def test_print(caption, term):
         try:
             print(caption, ' : ', term)
         except UnicodeEncodeError:
-            term = term.encode('ascii', 'ignore')
+            term = term.encode(sys.stdout.encoding)
             print(caption, ' : ', term)
 
+def get_pausetime():
+    return PAUSETIME
+
+def pause_printtime(caption, previous_checkpoint_time):
+    """
+    DESCRIPTION: If PAUSETIME is set, pause the program and measure time between checkpoints
+    INPUT: 
+    OUTPUT: 
+    """
+    pause_time = time.time()
+    if PAUSETIME == True:
+        print('\n**PAUSETIME** ', caption, ':', pause_time - previous_checkpoint_time, 'seconds\n')
+    
+        input('Press enter to continue')
+        delay_time = time.time() - pause_time
+        return (pause_time + delay_time, time.time())
+    else:
+        return (pause_time, time.time())
+
+def test_size(a):
+    return sys.getsizeof(a)
 
 """DIRECTORY AND FILENAME METHODS
 """
@@ -77,16 +101,7 @@ def get_attribute_list(csv_fullpath):
     return attribute_list
 
 
-def get_attribute_dict(attribute_dict, csv_fullpath):
-    new_attribute_list = get_attribute_list(csv_fullpath)
-    new_table_name = csv_to_table(os.path.basename(csv_fullpath))
-    
-    #TODO: protect against adding attribute_list for same table name
-    attribute_dict[new_table_name] = new_attribute_list
-    
-    return attribute_dict
-	
-def get_attribute_dict2(table_list):
+def get_attribute_dict(table_list):
     # Loop through table list
     # Build attribute_list for each table
     attribute_dict = {}
@@ -159,36 +174,6 @@ def get_table_list():
         # Remove last four char, i.e., .csv
         table_list.append(c[:-4])
     return table_list
-
-def get_query_table_list(raw_query):
-    """GET_QUERY_TABLE_LIST
-    DESCRIPTION: Get a list of tables called out in a query. Don't confuse with building
-        a list of tables available to query (i.e., in /tables folder)
-    INPUT: raw_query string input from user
-    OUTPUT: query_table_list: list of tables called out in query
-    DEPENDENCY: string.punctuation
-    """
-    query_table_list = []
-    full_table_list = get_table_list()
-
-    # Remove punctuation from string
-    # https://stackoverflow.com/a/34294398/752784
-    # remove_this is string.punctuation, minus the -
-    remove_this = '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
-    translator = str.maketrans('', '', remove_this)
-    raw_query = raw_query.translate(translator)
-
-    # Break raw query up so it's just a list of terms        
-    broken_query = raw_query.split(' ')
-    
-    # Loop over broken_query, finding terms that match full_table_list
-    for term in broken_query:
-        for table_name in full_table_list:
-            if term == table_name:
-                query_table_list.append(table_name)
-                break
-    
-    return query_table_list
 
 
 def sql_not_like(a, b):
@@ -272,9 +257,15 @@ def eval_binary_comparison(a, op, b):
     # Convert a and b to numbers, if possible
     # TODO: why doesn't this work with float(a)?
     try:
-        a = int(a)
-        b = int(b)
+        type_a = type(a).__name__
+        type_b = type(b).__name__
+        
+        if type_a != 'bool' and type_b != 'bool':
+            a = int(a)
+            b = int(b)
+            
     except:
+        # OK, it's a string then
         pass
     
     result = ops[op](a, b)
@@ -356,12 +347,13 @@ def readline_like_csv(f):
     open_quotes = False
     prev_line = ''
     b = f.tell()
+
     
     while open_quotes == False:
         # TODO: debug this try-except block -- not sure if it's universal
         try:
             # Line is a byte object
-            this_line = f.readline().decode(encoding='utf-8')
+            this_line = f.readline().decode(sys.stdout.encoding)
         except AttributeError:
             # Line has already been decoded into string
             f.seek(b)
@@ -369,6 +361,11 @@ def readline_like_csv(f):
         except TypeError:
             f.seek(b)
             this_line = f.readline()
+        except UnicodeEncodeError:
+            # Handles printing to Windows console with UTF-8 isn't default... ?
+            # In any case, it bypasses an error. Maybe it should be default in program.
+            f.seek(b)
+            this_line = f.readline().decode(sys.stdout.encoding)
 
         line = prev_line + this_line
         n_quotes = line.count('"')
@@ -378,5 +375,5 @@ def readline_like_csv(f):
         prev_line = line
         
         b = f.tell()
-                
+       
     return b, line

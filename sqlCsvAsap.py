@@ -175,6 +175,9 @@ def display_query_result(result_list):
 if __name__ == '__main__':
     print('\n\n!!!SQL CSV ASAP!!!')
     print('\nType help for a list of commands')
+    
+    # remove temp files that may exist - an artifact of debug mode, which keeps them for viewing
+    remove_temp_files()
 
     # Keep running this loop while the user is using the program.
     # Only the command 'quit' should return False, thus exiting the loop.

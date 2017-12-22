@@ -1,5 +1,6 @@
 from utils import *
 from index import *
+import string
 
 def get_sql_terms():
     # List of SQL terms handled by program
@@ -18,9 +19,44 @@ def get_connector_list():
     return ['AND', 'OR', 'NOT']
     
 def get_verb_list():
-    # List of operators
+    # List of relationships for WHERE terms
     # Order is kind of important - want NOT LIKE before LIKE
     return ['NOT LIKE', 'LIKE', '=', '<>', '<', '<=', '>', '>=']
+    
+def get_operator_list():
+    # List of operators for WHERE terms
+    return ['+', '-', '/', '*']
+    
+    
+def get_raw_query_table_list(raw_query):
+    """GET_QUERY_TABLE_LIST
+    DESCRIPTION: Get a list of tables called out in a query. Don't confuse with building
+        a list of tables available to query (i.e., in /tables folder)
+    INPUT: raw_query string input from user
+    OUTPUT: query_table_list: list of tables called out in query
+    DEPENDENCY: string.punctuation
+    """
+    query_table_list = []
+    full_table_list = get_table_list()
+
+    # Remove punctuation from string
+    # https://stackoverflow.com/a/34294398/752784
+    # remove_this is string.punctuation, minus the -
+    remove_this = '!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
+    translator = str.maketrans('', '', remove_this)
+    raw_query = raw_query.translate(translator)
+
+    # Break raw query up so it's just a list of terms        
+    broken_query = raw_query.split(' ')
+    
+    # Loop over broken_query, finding terms that match full_table_list
+    for term in broken_query:
+        for table_name in full_table_list:
+            if term == table_name:
+                query_table_list.append(table_name)
+                break
+    
+    return query_table_list
 
 def map_join_constraints(q):
     """MAP_JOIN_CONSTRAINTS
@@ -210,7 +246,7 @@ def force_table_attr_pairs(input_list, table_list):
     # 1) Replace in dict in list, as in WHERE clause
     # 2) Replace in simple list, as in SELECT clause
     
-    attribute_dict = get_attribute_dict2(table_list)
+    attribute_dict = get_attribute_dict(table_list)
     
     # Loop through input_list
     for i in range(len(input_list)):
@@ -272,7 +308,7 @@ def parse_select(raw_query, alias_dict={}):
         select_list = replace_table_alias(select_list, alias_dict)
     
     # Final step: replace all attribute names with table.name
-    table_list = get_query_table_list(raw_query)
+    table_list = get_raw_query_table_list(raw_query)
     select_list = force_table_attr_pairs(select_list, table_list)
     
     return select_list
@@ -401,10 +437,23 @@ def parse_where(raw_query, alias_dict={}):
             if where_list[w]['Object'] == '':
                 where_list[w]['Object'] = initial_where_list[i]
             else:
-                where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
+                # If Object isn't empty, and a math operator shows up -- special case
+                if initial_where_list[i] in get_operator_list():
+                    where_list[w]['Operator'] = initial_where_list[i]
+                elif 'Operator' in where_list[w]:
+                    # Operator term exists, expecting next term to be a number
+                    # TODO: should check that, eh?
+                    where_list[w]['Operand'] = initial_where_list[i]
+                else:
+                    # Keep adding terms to Object
+                    where_list[w]['Object'] = where_list[w]['Object'] + ' ' + initial_where_list[i]
+            
+    # Remove single-quotes from beginning and ending of WHERE Object terms
+    for w in range(len(where_list)):
+        where_list[w]['Object'] = where_list[w]['Object'].strip("'")
             
     # Replace all attribute names with table.attribute
-    table_list = get_query_table_list(raw_query)
+    table_list = get_raw_query_table_list(raw_query)
     where_list = force_table_attr_pairs(where_list, table_list)
     
     # Determine whether WHERE clauses are joins
@@ -423,7 +472,7 @@ def parse_orderby(raw_query, alias_dict={}):
     orderby_list = replace_table_alias(orderby_list, alias_dict)
     
     # Replace all attribute names with table.attribute
-    table_list = get_query_table_list(raw_query)
+    table_list = get_raw_query_table_list(raw_query)
     orderby_list = force_table_attr_pairs(orderby_list, table_list)
 
     # TODO: redo this when it's possible to sort on multiple terms
@@ -452,60 +501,91 @@ def parse_alias(raw_query):
     
     return alias_dict
 
-def prepare_user_input(user_input):
-    # Combine SQL terms with more than one word into a single word
-    sql_terms = get_sql_terms()
-    sql_terms_nospace = get_sql_terms_nospace()
-    
-    for i in range(len(sql_terms)):
-        if ' ' in sql_terms[i]:
-            user_input = user_input.replace(sql_terms[i], sql_terms_nospace[i])
-
-    # Trim spaces on ends
-    user_input = user_input.strip()
-    
-    return user_input
-
 class Query:
     def __init__(self, user_input):
         self.user_input = user_input
-        self.prepared_user_input = prepare_user_input(self.user_input)
+        self.prepare_user_input()
         self.alias = parse_alias(self.prepared_user_input)
+        
+        self.parse_distinct()
+        
         self.FROM = parse_from(self.prepared_user_input)
         self.SELECT = parse_select(self.prepared_user_input, self.alias)
         self.WHERE = parse_where(self.prepared_user_input, self.alias)
         self.ORDERBY = parse_orderby(self.prepared_user_input, self.alias)
-        
-        self.query_table_list = get_query_table_list(self.prepared_user_input)
-        self.attribute_dict = get_attribute_dict2(self.query_table_list)
 
         self.join_constraints = map_join_constraints(self)
         self.value_constraints = map_value_constraints(self)
         
-        # List of available indexes for query
-        self.index_list = get_query_index_list(self.query_table_list)
-        self.where_table_attribute_list = self.get_where_attribute_list()
+        self.get_query_table_list()
+        self.attribute_dict = get_attribute_dict(self.table_list)
         
+        # List of available indexes for query
+        self.index_list = get_query_index_list(self.table_list)
+        self.get_where_table_attr_list()
         
         self.show_parsed_query()
-    
-    def get_where_attribute_list(self):
-        # returns table_attr as table.attr
-        where_table_attr_list = []
+
+    def prepare_user_input(self):
+        # Combine SQL terms with more than one word into a single word
+        sql_terms = get_sql_terms()
+        sql_terms_nospace = get_sql_terms_nospace()
+        
+        self.prepared_user_input = self.user_input
+        
+        for i in range(len(sql_terms)):
+            if ' ' in sql_terms[i]:
+                self.prepared_user_input = self.prepared_user_input.replace(sql_terms[i], sql_terms_nospace[i])
+
+        # Trim spaces on ends
+        self.prepared_user_input = self.prepared_user_input.strip()
+
+    def parse_distinct(self):
+        self.distinct = False
+        if ('SELECT DISTINCT') in self.prepared_user_input:
+            self.distinct = True
+            self.prepared_user_input = self.prepared_user_input.replace('SELECT DISTINCT', 'SELECT')
+        
+    def get_query_table_list(self):
+        self.table_list = []
+
+        for table_name in self.value_constraints:
+            if table_name not in self.table_list:
+                self.table_list.append(table_name)
+        test_print('self.table_list',self.table_list)
+        
+        for table_pair in self.join_constraints:
+            for table_name in table_pair:
+                if table_name not in self.table_list:
+                    self.table_list.append(table_name)
+        test_print('self.table_list',self.table_list)
+        
+        for table_attr in self.SELECT:
+            (table_name, attr_name) = parse_table_attribute_pair(table_attr)
+            if table_name not in self.table_list:
+                self.table_list.append(table_name)
+        test_print('self.table_list',self.table_list)
+        
+    def get_where_table_attr_list(self):
+        self.where_table_attribute_list = []
         for table_name in self.value_constraints:
             for i in self.value_constraints[table_name]:
-                if self.WHERE[i]['Subject'] not in where_table_attr_list:
-                    where_table_attr_list.append(self.WHERE[i]['Subject'])
+                if self.WHERE[i]['Subject'] not in self.where_table_attribute_list:
+                    self.where_table_attribute_list.append(self.WHERE[i]['Subject'])
         for table_name in self.join_constraints:
             for i in self.join_constraints[table_name]:
-                if self.WHERE[i]['Subject'] not in where_table_attr_list:
-                    where_table_attr_list.append(self.WHERE[i]['Subject'])
-                if self.WHERE[i]['Object'] not in where_table_attr_list:
-                    where_table_attr_list.append(self.WHERE[i]['Object'])
-        return where_table_attr_list
-    
+                if self.WHERE[i]['Subject'] not in self.where_table_attribute_list:
+                    self.where_table_attribute_list.append(self.WHERE[i]['Subject'])
+                if self.WHERE[i]['Object'] not in self.where_table_attribute_list:
+                    self.where_table_attribute_list.append(self.WHERE[i]['Object'])
+
+                    
     def show_parsed_query(self):
-        print('SELECT:', self.SELECT)
+        select_statement = 'SELECT: '
+        if self.distinct == True:
+            select_statement += 'DISTINCT '
+        select_statement += ', '.join(self.SELECT)
+        print(select_statement)
         print('FROM:', self.FROM)
         if self.WHERE != '':
             print('WHERE:')
@@ -522,5 +602,5 @@ class Query:
                 print(this_line)
         print('ORDER BY:', self.ORDERBY)
 
-        test_print('query_table_list:', self.query_table_list)
-        test_print('index_list:', self.index_list)
+        test_print('prepared_user_input', self.prepared_user_input)
+        test_print('table_list', self.table_list)
