@@ -15,20 +15,13 @@ def perform_query(Q, I):
         - Assumption: SELECT and FROM are valid. They are the minimum to query.
     """
 
-    # Query timer for debugging
-    checkpoint_time = time.time()
-
     R = ResultsManager()
-    
-    (start_time, checkpoint_time) = pause_printtime('let\'s get started:', checkpoint_time)
     
     # For each table, get the results filtered by value_constraints in the WHERE clause
     filter_value_constraints(Q, I, R)
-    (start_time, checkpoint_time) = pause_printtime('filter_value_constraints:', checkpoint_time)
     
     # For each table pair, get the table1-table2 pairs resulting from join_constraints in WHERE clause
     filter_join_constraints(Q, I, R)
-    (start_time, checkpoint_time) = pause_printtime('filter_join_constraints:', checkpoint_time)
     
     test_print('\nR.filtered_headers_dict',R.filtered_headers_dict)
     test_print('\nR.filtered_results_dict',R.filtered_results_dict)
@@ -36,7 +29,6 @@ def perform_query(Q, I):
     
     # Combine the results
     combine_final_results(Q, R)
-    (start_time, checkpoint_time) = pause_printtime('combine_final_results:', checkpoint_time)
     
     # Handle ORDER BY
     order_final_results(Q, R)
@@ -77,7 +69,6 @@ def filter_join_constraints(Q, I, R):
         has_filter1 = False
         if table1 in R.filtered_results_dict:
             if R.filtered_results_dict[table1] != None:
-                test_print('filter_join_constraints / has_filter',table1)
                 # So: Table1 was filtered, returned no results (if None, not filtered)
                 has_filter1 = True
         else:
@@ -92,7 +83,6 @@ def filter_join_constraints(Q, I, R):
             byte_list1 = []
             for b in R.filtered_results_dict[table1]:
                 byte_list1.append(b)
-            test_print('filter_join_constraints / has_filter1 / byte_list1 len', (table1, len(byte_list1)))
         elif has_index1 == True:
             # Case b: No filter, but there is an index for this table. Use byte positions from index.
             byte_list1 = []
@@ -106,7 +96,6 @@ def filter_join_constraints(Q, I, R):
         i1 = 0
 
         while True:
-            print(b1)
             # Determine the next byte position b1 to go to in f1
             if byte_list1 != None:
                 if len(byte_list1) == 0:
@@ -117,8 +106,7 @@ def filter_join_constraints(Q, I, R):
                     # Retrieve next byte position from byte list, if filter or index is available
                     b1 = byte_list1[i1]
                     i1 += 1
-                    # Remove from byte_list - done using it
-                    byte_list1.remove(b1)
+
             else:
                 # (c) table scan
                 pass
@@ -126,9 +114,6 @@ def filter_join_constraints(Q, I, R):
             # Return the line from position b1 in the file
             f1.seek(b1)
             (b1_returned, line1) = readline_like_csv(f1)
-            
-            test_print('b1:',b1)
-            test_print('b1_returned:',b1_returned)
         
             # Line will read empty at end of file
             if not line1:
@@ -139,7 +124,6 @@ def filter_join_constraints(Q, I, R):
                 for row1 in csv.reader([line1]):
                     # Search for various table1-table 2 join constraints
                     for table_pair in Q.join_constraints:
-                        test_print('table_pair',table_pair)
                         # Only check constraints where table1 is the first table
                         if table_pair[0] != table1:
                             continue
@@ -156,7 +140,6 @@ def filter_join_constraints(Q, I, R):
                                 # This will return false if R.filtered_results_dict[table2] is an empty dict
                                 # So: Table1 was filtered, returned no results (if None, not filtered)
                                 has_filter2 = True
-                                test_print('filter_join_constraints / has_filter2', has_filter2)
 
                         else:
                             if table2 not in new_filtered_dict:
@@ -177,24 +160,16 @@ def filter_join_constraints(Q, I, R):
                             byte_list2 = None
                             if has_filter2 == True:
                                 # Case a: Table has been filtered, use byte positions returned from filter.
-#                                print('has_filter2')
-#                                print('R.filtered_results_dict[table2]',R.filtered_results_dict[table2])
                                 byte_list2 = []
                                 for b in R.filtered_results_dict[table2]:
                                     byte_list2.append(b)
-                                test_print('filter_join_constraints / filter / byte_list2 / len', len(byte_list2))
+
                             elif has_index2 == True:
                                 # Case b: No filter, but there is an index for this table.
                                 # Use byte positions from index for attr_name2 and attr_value1 (yes, attr_value2 is based on attr_value1)
-#                                print('has_index2')
                                 byte_list2 = get_index_byte_list(Q, I, table2, attr_name2, attr_value1)
-                                test_print('filter_join_constraints / index / byte_list2 / len', len(byte_list2))
-#                                printstring = 'index / byte_list2:' + attr_name2 + attr_value1
-#                                print(printstring)
-#                                print(byte_list2)
+
                             # Case c: If byte_list2 is still None at this point, need to do a table scan on table2
-                            
-#                            test_print('byte_list2',byte_list2)
                             
                             # Loop over table2
                             b2 = 0
@@ -202,7 +177,6 @@ def filter_join_constraints(Q, I, R):
                             int_result = []
                             while True:
                                 if b2 == 0:
-#                                    print('start table2: byte_list2:',byte_list2)
                                     pass
                                 # Determine the next byte position b2 to go to in f2
                                 if byte_list2 != None:
@@ -214,8 +188,6 @@ def filter_join_constraints(Q, I, R):
                                         # Retrieve next byte position from byte list, if filter or index is available
                                         b2 = byte_list2[i2]
                                         i2 += 1
-                                        # Remove from byte_list - done using it
-                                        byte_list2.remove(b2)
                                         
                                 else:
                                     # (c) table scan
@@ -225,9 +197,6 @@ def filter_join_constraints(Q, I, R):
                                 f2.seek(b2)
                                 (b2_returned, line2) = readline_like_csv(f2)
                                 
-#                                test_print('b2:',b2)
-#                                test_print('b2_returned:',b2_returned)
-                                
                                 # Line will read empty at end of file for table scan
                                 if not line2:
                                     break
@@ -236,7 +205,6 @@ def filter_join_constraints(Q, I, R):
                                 if b2 > 0 and line2 != '':
                                     for row2 in csv.reader([line2]):
                                         if compare_join_constraints(Q, table1, row1, table2, row2) == True:
-                                            test_print('filter_join_constraints / compare_join_constraints', (table1, b1, table2, b2))
                                             # row1-row2 passes join constraints. Capture the results.
                                             R.join_dict[table_pair].append((b1, b2))
                                             
@@ -284,6 +252,7 @@ def filter_value_constraints(Q, I, R):
     
     for table in Q.table_list:
         if table in Q.value_constraints or len(Q.value_constraints) == 0:
+            test_print('filter_value_constraints',table)
             # Set up dict to hold results
             if table not in R.filtered_results_dict:
                 R.filtered_results_dict[table] = {}
@@ -300,7 +269,6 @@ def filter_value_constraints(Q, I, R):
             
             byte_list = []
             if has_index == True:
-                test_print('filter_value_constraints / has_index',table)
                 byte_list = get_index_byte_list(Q, I, table)
             
             # Open the table file for reading
@@ -369,7 +337,6 @@ def combine_final_results(Q, R):
     #R.join_dict[table1, table2] = [(b1, b2), ...]
     
     combined_results = []
-    checkpoint_time = time.time()
     
     # First: add headers to combined_results
     # TODO: If handling AS alias, use that instead
@@ -405,9 +372,7 @@ def combine_final_results(Q, R):
         # e.g., for a three table join, need to match b2 of R.join_dict[(table1,table2)] = (b1,b2)
         # with b2 of R.join_dict[(table2,table3)] = (b2,b3)
         # End result will be list of [b1,b2,b3] from which to gather data from R.filtered_results_dict
-        
-        (start_time, checkpoint_time) = pause_printtime('combine_final_results / start:', checkpoint_time)
-        
+                
         final_join_results = []
         # join_table_list is a map to table headers
         join_table_list = []
@@ -416,15 +381,10 @@ def combine_final_results(Q, R):
                 join_table_list.append(table1)
             if table2 not in join_table_list:
                 join_table_list.append(table2)
-        
-        (start_time, checkpoint_time) = pause_printtime('combine_final_results / set up join_table_list:', checkpoint_time)
-        
+                
         n_join_tables = len(join_table_list)
         joined_tables = []
         for (table1, table2) in R.join_dict:
-            (start_time, checkpoint_time) = pause_printtime(('combine_final_results / final_join_results append:', table1, table2), checkpoint_time)
-
-            
             # Get position of table1, table2 in join_table_list
             for t in range(len(join_table_list)):
                 if table1 == join_table_list[t]:
@@ -499,7 +459,6 @@ def combine_final_results(Q, R):
             #R.join_dict[(table1, table2)] = []
 
         test_print('final_join_results length', len(final_join_results))
-        (start_time, checkpoint_time) = pause_printtime('combine_final_results / matching:', checkpoint_time)
 
         # After all matching is done, remove any row in final_join_results containing None
         new_final_join_results = []
@@ -512,8 +471,6 @@ def combine_final_results(Q, R):
             if none_row == False:
                 new_final_join_results.append(final_join_results[row])
         final_join_results = new_final_join_results
-
-#        test_print('final_join_results',final_join_results)
         
         # Get values for the byte positions from R.filtered_results_dict
         # Loop through all rows in final_join_results. Turn the byte numbers into data.
@@ -621,8 +578,6 @@ def test_value_constraints(table, row, q):
             # Append result
             constraints_list.append(eval_binary_comparison(attr_value, op, obj))
                 
-#        test_print('\ntest_value_constrants / constraints_list',(constraints_list, q.value_constraints))
-        
         # only need to do extra processing if there are multiple WHERE conditions to combine, i.e., len >2
         #TODO: need to do some grouping when doing an OR compare on the same attribute
         result = constraints_list[0]
@@ -634,10 +589,7 @@ def test_value_constraints(table, row, q):
                     op = constraints_list[c + 1]
                     b = constraints_list[c + 2]
                     result = eval_binary_comparison(a, op, b)
-#                    test_print('test_value_constrants / combine_results',('a:', a, 'op:', op, 'b:', b, 'result:', result))
-                    
-#        test_print('test_value_constrants / result',result)
-    
+
     return result
 
 def get_individual_join_constraint_results(Q, table1, row1, table2, row2):
@@ -714,14 +666,6 @@ def get_individual_join_constraint_results(Q, table1, row1, table2, row2):
                         attr_value2 *= operand
                     if math_operator == '/':
                         attr_value2 /= operand
-#                    print('math:',attr_value2)
-                    
-#                print('attr_value1:',attr_value1, type(attr_value1))
-#                print('operand:',operand, type(operand))
-#                print('attr_value2:',attr_value2, type(attr_value2))
-
-#        print('attr_name1:',q.attribute_dict[table1][attr_index1],'|','attr_value1:',row1[attr_index1])
-#        print('attr_name2:',q.attribute_dict[table2][attr_index2],'|','attr_value2:',row2[attr_index2])
         
         # Append result
         constraint_results.append(eval_binary_comparison(attr_value1, operator, attr_value2))
