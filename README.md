@@ -1,12 +1,7 @@
 # sqlCsvAsap
 Perform SQL queries on CSV data. Project for Fall 2017 CS411 Database Systems class at University of Illinois.
 
-To make queries go faster, index available tables on the attributes you want to query. To do so, type 'index' from the start menu. One version of indexing is available currently: keyword indexing.
-
-Sample index command:
-
-    create index TABLENAME keyword ATTRIBUTENAME
-    create index business keyword city
+Start the program by running sqlCsvAsap.py
 
 To start a query, type 'query' from the start menu.
 
@@ -19,5 +14,11 @@ Here are some test queries to try:
     SELECT DISTINCT Year, Film, movie_title, title_year, director_name, Award FROM oscars, movies WHERE Name = director_name AND Year > title_year + 5 AND Winner = 1
     SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business B, review-1m R WHERE B.city = Champaign AND B.state = IL AND B.business_id = R.business_id
 
+To make queries go faster, index available tables on the attributes you want to query. To do so, type 'index' from the start menu. One version of indexing is available currently: keyword indexing.
+
+Sample index command:
+
+    create index TABLENAME keyword ATTRIBUTENAME
+    create index business keyword city
 
 If you would like to see more information about what the program is doing, in utils.py, set the TESTMODE variable to True.
