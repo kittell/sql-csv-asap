@@ -376,10 +376,6 @@ def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
             if len(vc) > 0:
                 full_byte_list = get_single_byte_list(Q, I, table_name, vc[0])
                 
-                
-#            print('full_byte_list:',full_byte_list)
-            
-#            test_print('get_index_byte_list / full_byte_list / initial:', full_byte_list)
             
             # If there are more than one value_constraint on this table, time to merge them
             for i in range(1,len(vc)):
@@ -405,7 +401,6 @@ def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
                 
                 # Replace full_byte_list with new list, temp_byte_list
                 full_byte_list = temp_byte_list
-#                test_print('get_index_byte_list / temp_byte_list:', temp_byte_list)
         else:
             return None
 
@@ -425,9 +420,6 @@ def get_index_byte_list(Q, I, table_name, attr_name = '', attr_value = ''):
                             continue
         else:
             return None
-
-
-#    test_print('get_index_byte_list / full_byte_list / final:', full_byte_list)
 
     return full_byte_list
     
@@ -611,7 +603,6 @@ class IndexManager:
         # Read available indexes in /index/
         self.master_index_dict = self.build_master_index_dict()
         self.query_index_dict = {}
-        test_print('master_index_dict:',self.master_index_dict)
         self.zeropass_byte_list = {}
     
     def build_master_index_dict(self):

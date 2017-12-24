@@ -10,7 +10,7 @@ import sys
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = True
+TESTMODE = False
 PAUSETIME = False
 
 def get_testmode():
@@ -26,27 +26,6 @@ def test_print(caption, term):
             term = term.encode(sys.stdout.encoding)
             print(caption, ' : ', term)
 
-def get_pausetime():
-    return PAUSETIME
-
-def pause_printtime(caption, previous_checkpoint_time):
-    """
-    DESCRIPTION: If PAUSETIME is set, pause the program and measure time between checkpoints
-    INPUT: 
-    OUTPUT: 
-    """
-    pause_time = time.time()
-    if PAUSETIME == True:
-        print('\n**PAUSETIME** ', caption, ':', pause_time - previous_checkpoint_time, 'seconds\n')
-    
-        input('Press enter to continue')
-        delay_time = time.time() - pause_time
-        return (pause_time + delay_time, time.time())
-    else:
-        return (pause_time, time.time())
-
-def test_size(a):
-    return sys.getsizeof(a)
 
 """DIRECTORY AND FILENAME METHODS
 """
@@ -63,56 +42,13 @@ def get_directory(name):
 
 def get_table_directory():
     return get_directory('tables')
-
-def get_temp_directory():
-    return get_directory('temp')
+    
 
 def get_csv_fullpath(csv_filename):
     # TODO: protection for when a full path is sent to this function
     csv_fullpath = os.path.join(get_table_directory(), csv_filename)
     return csv_fullpath
-
-def get_filtered_table_fullpath(table):
-    dir = get_temp_directory()
-    filtered_filename = 'temp_filtered__' + table + '.csv'
-    return os.path.join(dir, filtered_filename)
-
-def get_temp_join_fullpath(table1, table2):
-    dir = get_temp_directory()
-    join_filename = 'temp_join__' + table1 + '__' + table2 + '.csv'
-    return os.path.join(dir, join_filename)
     
-
-def get_attribute_list(csv_fullpath):
-    """
-    DESCRIPTION: For a given path of a .csv file, return the list of attributes, 
-        which is assumed to be the values in the first row of the file
-    INPUT: csv_fullpath: full path and filename for target .csv file
-    OUTPUT: attribute_list: list containing names of attributes (strings)
-    """
-    # First: protect against receiving table_name instead of csv_fullpath...
-    if '.csv' not in csv_fullpath:
-        # Just assume it was a table_name; if not, better luck next time
-        csv_fullpath = table_to_csv_fullpath(csv_fullpath)
-    
-    with open(csv_fullpath, newline='', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        attribute_list = next(reader)
-    return attribute_list
-
-
-def get_attribute_dict(table_list):
-    # Loop through table list
-    # Build attribute_list for each table
-    attribute_dict = {}
-    for table_name in table_list:
-        csv_fullpath = table_to_csv_fullpath(table_name)
-        attribute_dict[table_name] = get_attribute_list(csv_fullpath)
-    
-    # Return attribute_list for each table
-    
-    return attribute_dict
-	
 def csv_to_table(csv_filename):
     """
     DESCRIPTION: Remove file extension from .csv files
@@ -165,9 +101,6 @@ def get_table_list():
     INPUT: none
     OUTPUT: table_list: list of filenames only of .csv files in \tables
     """
-    # method for getting list of files for a directory comes from:
-    # https://stackoverflow.com/a/41447012/752784
-    
     table_list = []
     csv_list = get_csv_list()
     for c in csv_list:
@@ -175,6 +108,66 @@ def get_table_list():
         table_list.append(c[:-4])
     return table_list
 
+
+# Note: Temp files would be used to offload intermediate query results that used
+# too much memory. However, they are not currently implemented.
+
+def get_temp_directory():
+    return get_directory('temp')
+
+def get_filtered_table_fullpath(table):
+    dir = get_temp_directory()
+    filtered_filename = 'temp_filtered__' + table + '.csv'
+    return os.path.join(dir, filtered_filename)
+
+def get_temp_join_fullpath(table1, table2):
+    dir = get_temp_directory()
+    join_filename = 'temp_join__' + table1 + '__' + table2 + '.csv'
+    return os.path.join(dir, join_filename)
+    
+def remove_temp_files():
+    # Cleanup: remove files from /temp folder
+    dir = get_temp_directory()
+    file_list = os.listdir(dir)
+    for file in file_list:
+        if os.path.isfile(os.path.join(dir, file)) == True:
+            os.remove(os.path.join(dir, file))
+
+    
+
+def get_attribute_list(csv_fullpath):
+    """
+    DESCRIPTION: For a given path of a .csv file, return the list of attributes, 
+        which is assumed to be the values in the first row of the file
+    INPUT: csv_fullpath: full path and filename for target .csv file
+    OUTPUT: attribute_list: list containing names of attributes (strings)
+    """
+    # First: protect against receiving table_name instead of csv_fullpath...
+    if '.csv' not in csv_fullpath:
+        # Just assume it was a table_name; if not, better luck next time
+        csv_fullpath = table_to_csv_fullpath(csv_fullpath)
+    
+    with open(csv_fullpath, newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        attribute_list = next(reader)
+    return attribute_list
+
+
+def get_attribute_dict(table_list):
+    # Loop through table list
+    # Build attribute_list for each table
+    attribute_dict = {}
+    for table_name in table_list:
+        csv_fullpath = table_to_csv_fullpath(table_name)
+        attribute_dict[table_name] = get_attribute_list(csv_fullpath)
+    
+    # Return attribute_list for each table
+    
+    return attribute_dict
+
+
+"""EVALUATION METHODS
+"""
 
 def sql_not_like(a, b):
     """SQL_NOT_LIKE
@@ -202,8 +195,6 @@ def sql_like(a, b):
     # Split b into wildcards and pattern
     # The resulting list will have an empty string where the wildcard was
     b_split = b.split('%')
-#    print('a:', a)
-#    print('b_split:', b_split)
     result = False
     
     # Convert inputs into strings
@@ -255,7 +246,7 @@ def eval_binary_comparison(a, op, b):
     }
     
     # Convert a and b to numbers, if possible
-    # TODO: why doesn't this work with float(a)?
+    # TODO: This try/except block is a hack job, needs to be improved
     try:
         type_a = type(a).__name__
         type_b = type(b).__name__
@@ -269,7 +260,6 @@ def eval_binary_comparison(a, op, b):
         # OK, it's a string then
         pass
     
-#    test_print('eval',(a, op, b))
     try:
         result = ops[op](a, b)
     except TypeError:
@@ -277,6 +267,9 @@ def eval_binary_comparison(a, op, b):
         
     return result
 
+
+"""TABLE-ATTRIBUTE STRING HANDLING
+"""
 
 def parse_table_attribute_pair(ta):
     """PARSE_TABLE_ATTRIBUTE_PAIR
@@ -319,15 +312,6 @@ def get_attribute_index(ta, attribute_dict):
             break
     
     return result
-
-def remove_temp_files():
-    # Cleanup: remove files from /temp folder
-    dir = get_temp_directory()
-    file_list = os.listdir(dir)
-    for file in file_list:
-        if os.path.isfile(os.path.join(dir, file)) == True:
-#            test_print('remove_temp_files / file', file)
-            os.remove(os.path.join(dir, file))
 
 
 def readline_like_csv(f):

@@ -552,19 +552,16 @@ class Query:
         for table_name in self.value_constraints:
             if table_name not in self.table_list:
                 self.table_list.append(table_name)
-        test_print('self.table_list',self.table_list)
         
         for table_pair in self.join_constraints:
             for table_name in table_pair:
                 if table_name not in self.table_list:
                     self.table_list.append(table_name)
-        test_print('self.table_list',self.table_list)
         
         for table_attr in self.SELECT:
             (table_name, attr_name) = parse_table_attribute_pair(table_attr)
             if table_name not in self.table_list:
                 self.table_list.append(table_name)
-        test_print('self.table_list',self.table_list)
         
     def get_where_table_attr_list(self):
         self.where_table_attribute_list = []
