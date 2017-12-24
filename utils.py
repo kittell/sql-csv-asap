@@ -10,7 +10,7 @@ import sys
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = True
+TESTMODE = False
 PAUSETIME = False
 
 def get_testmode():
