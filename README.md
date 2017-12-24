@@ -8,6 +8,8 @@ Sample index command:
     create index TABLENAME keyword ATTRIBUTENAME
     create index business keyword city
 
+To start a query, type 'query' from the start menu.
+
 Queries take arguments for SELECT, FROM, and WHERE. Joins are handled in the WHERE clause, for example, by setting WHERE table1.attr = table2.attr. SELECT clauses can include DISTINCT to remove duplicates from final results. Table names can be aliased in FROM, and alias names used elsewhere in the query.
 
 Here are some test queries to try:
