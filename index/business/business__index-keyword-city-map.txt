@@ -1,0 +1,1009 @@
+110 Las Vegas:0
+AGINCOURT:23
+Aberdour:42
+Aberlady:60
+Ahwahtukee:87
+Ahwatukee:107
+Ahwatukee Foothills Village:260
+Aichwald:297
+Ajax:324
+Alburg:2151
+Allegheny:2167
+Allison Park:2186
+Ambridge:2812
+Amherst:3065
+Anjou:3653
+Ansnorveldt:3767
+Anthem:3788
+Arlington:4608
+Arnold:4636
+Arrowhead:4679
+Ashburn:4698
+Aspinwall:4715
+Auburn Township:4875
+Auburn Twp:4900
+Aurora:4920
+Avalon:7203
+Avon:7273
+Avon Lake:8754
+Avondale:9592
+Baie-D'urfe:14662
+Baie-d'Urfé:14683
+Bainbridge:14705
+Bainbridge Township:14795
+Baldwin:14822
+Balerno:14847
+Ballantyne:14864
+Banksville:14883
+Bath:14903
+Bathurst Quay:14934
+Bay Village:14957
+Beachwood:15259
+Beaconsfield:17292
+Beauharnois:17375
+Bedford:17396
+Bedford HTS:18145
+Bedford Heights:18166
+Bedford Hts.:18334
+Beeton:18356
+Belleville:18398
+Bellevue:18532
+Bellvue:18834
+Belmont:18869
+Beloeil:19963
+Ben Avon:20033
+Bentleyville:20051
+Berea:20073
+Berg:20865
+Bernhausen:20888
+Berry:20908
+Bethel Park:20922
+Black Earth:22157
+Blackness:22223
+Blainville:22242
+Blawnox:22289
+Bloomfield:22324
+Blue Diamond:22344
+Bois-Des-Filion:22442
+Boisbriand:22467
+Bolton:22591
+Bonnyrigg:22794
+Bonnyrigg and Lasswade:22830
+Boston Heights:22860
+Boucherville:22892
+Boulder City:23109
+Braddock:25303
+Bradford:25391
+Bradford West Gwillimbury:25537
+Bradfordwoods:25706
+Brampton:25729
+Bratenahl:31829
+Brecksville:31857
+Brentwood:32387
+Bridgeville:32511
+Brimfield:33844
+Broadlands:33863
+Broadview Heights:33883
+Brook Park:34680
+Brooklin:35055
+Brookline:35117
+Brooklyn:35145
+Brooklyn Heights:35703
+Brooklyn Hts.:35738
+Brookpark:35761
+Brossard:35905
+Broxburn:37117
+Brunswick:37135
+Brunswick Hills:38248
+Bruntsfield:38273
+Buckeye - Shaker:38293
+Buena Vista:38318
+Burntisland:38348
+Burton:38377
+Böblingen:38553
+C Las Vegas:39639
+CHARLOTTE:39660
+CITY CENTER:39679
+Caledon:39700
+Caledon East:39856
+Caledon Village:39920
+Camargo:39945
+Candiac:39961
+Canonsburd:39995
+Canonsburg:40015
+Carefree:41149
+Carnegie:41839
+Castle Shannon:42575
+Catawba Springs:42668
+Cave Creek:42692
+Cecil:45646
+Centennial Hills:45714
+Central City:45740
+Central City Village:45762
+Central Henderson:45810
+Centre Island:45837
+Chagrin Falls:45860
+Chagrin Highlands:47140
+Chambly:47167
+Champaign:47264
+Champlain:56851
+Chander:56906
+Chandler:56923
+Chandler-Gilbert:89033
+Chardon:89059
+Charlemagne:89452
+Charlote:89473
+Charlotte:89491
+Charlotte (University):156261
+Chatauguay:156292
+Chateau:156312
+Chateauguay:156329
+Chertsey:156472
+Chesterland:156490
+Cheswick:156936
+Chomedey, Laval:157106
+Churubusco:157131
+Châteauguay:157159
+Citibank:157207
+City of Edinburgh:157225
+Clairton:157279
+Claremont:157396
+Clark:157415
+Clarkson:157466
+Cleveland:157483
+Cleveland Heights:183776
+Cleveland Hghts.:185381
+Clinton:185407
+Columbia Station:185432
+Communauté-Urbaine-de-Montréal:185573
+Concord:185624
+Concord Mills:192034
+Concord Township:192081
+Concord Twp:192107
+Cooksville:192128
+Copley:192148
+Coraopolis:192394
+Cornelius:193698
+Cote Saint-Luc:196947
+Cote-Saint-Luc:197006
+Cottage Grove:197039
+Cowdenbeath:197292
+Crafton:197313
+Cramerton:197402
+Cramond:197510
+Creighton:197527
+Crescent:197554
+Cross Plains:197572
+Cuddy:197756
+Currie:197780
+Cuyahoga Falls:197796
+Cuyahoga Fls:200090
+Cuyahoga Heights:200121
+Côte-Saint-Luc:200146
+Dalgety Bay:200171
+Dalkeith:200192
+Dallas:200315
+Dane:200525
+Davidson:200557
+De Forest:201284
+DeForest:201504
+Delson:201664
+Denkendorf:201705
+Desert Ridge:201776
+Deux-Montagnes Regional County Municipality:201798
+Dewey:201851
+Ditzingen:201866
+Dollard-Des Ormeaux:202068
+Dollard-Des-Ormeaux:202106
+Dollard-des-Ormeaux:202648
+Don Mills:203040
+Dormont:203077
+Dorval:203138
+Downsview:203757
+Downtown:203793
+Downtown Toronto:203836
+Dravosburg:203880
+Dudley:203966
+Dunfermline:203991
+Duquesne:204332
+East Cleveland:204359
+East Credit:204410
+East Gwilimbury:204431
+East Gwillimbury:204456
+East Liberty:204629
+East Loth:204651
+East Lothian:204670
+East Mc Keesport:204710
+East McKeesport:204753
+East Mesa:204786
+East Mississauga:204805
+East Pittsburgh:204831
+East York:204891
+Eastlake:205954
+Edgewood:206351
+Edgeworth:206378
+Edimbourg:206397
+Edinburgh:206416
+Edinburgh City of:238455
+El Mirage:238482
+Elizabeth:239291
+Elizabeth Township:239504
+Elk Grove Villa:239532
+Elrama:239575
+Elyria:239591
+Emsworth:240715
+Enterprise:240751
+Esslingen:240823
+Esslingen am Neckar:241791
+Estrella Village:241945
+Estérel:241971
+Etna:241989
+Etobicoke:242066
+Euclid:247316
+FORT MILL:247968
+Fabreville:247987
+Fairlawn:248007
+Fairport Harbor:249074
+Fairview:249151
+Fairview Park:249334
+Farnham:250044
+Fellbach:250061
+Filderstadt:250891
+Finleyville:251377
+Firth of Forth:251469
+Fitchburg:251510
+Fitchburgh:253053
+Fithian:253073
+Forest Grove:253090
+Forest Hills:253112
+Fort  Mill:253151
+Fort McDowell:253171
+Fort Mill:253301
+Fountain Hills:257593
+Fountainbridge:260079
+Fox Chapel:260102
+Franklin Park:260121
+Frazer:260153
+Freiberg:260496
+Freyburg:260514
+Ft. Mill:260603
+Fullerton:260630
+Garfield Heights:260649
+Gastonia:260983
+Gates Mills:264112
+Geauga:264142
+Gelndale:264167
+Georgetown:264185
+Gerlingen:264503
+Gibsonia:264737
+Gifford:265548
+Gilbert:265574
+Gilbert AZ:290664
+Glasgow:290683
+Glassport:290715
+Glbert:290770
+Glen Williams:290786
+Glendale:290809
+Glendale Az:316040
+Glenrothes:316061
+Glenshaw:316126
+Godmanchester:316463
+Goodwood:316486
+Goodyear:316513
+Goodyear AZ:322760
+Gorebridge:322780
+Gormley:322809
+Grafton:322860
+Grand River:322956
+Greater Charlotte:322986
+Green Tree:323013
+Green Valley:323033
+Greenfield Park:323055
+Guadalupe:323152
+Gullane:323339
+Haddington:323382
+Hampton Township:323447
+Harmarville:323544
+Harrisbug:323582
+Harrisburg:323601
+Harrisburg,:324451
+Harrison City:324472
+Harwick:324538
+Hawthorne:324555
+Hazelwood:324573
+Heidelberg:324592
+Hemmingen:324680
+Hemmingford:324813
+Henderson:324834
+Henderson (Green Valley):361415
+Henderson Nevada:361449
+Henderson and Las vegas:361475
+Hendersonville:361508
+Henderston:361532
+Hendserson:361551
+Herminie:361570
+Highland Heights:361606
+Highland Hills:361881
+Higley:361913
+Hinckley:362099
+Hiram:362223
+Hochdorf:362256
+Homer:362300
+Homestead:362342
+Houston:363357
+Hudson:363427
+Huntersville:364843
+Huntingdon:369310
+Huntsburg:369330
+Imperial:369348
+Independence:369480
+Indian Land:370437
+Indian Land,:370803
+Indian Lands:370825
+Indian Trail:370847
+Indian land:372666
+Indianola:372687
+Inglewood:372706
+Ingliston:372725
+Ingomar:372762
+Ingram:372787
+Inverkeithing:372801
+Inverness:372842
+Irwin:374393
+Jefferson Hills:375250
+Joliette:375335
+Juniper Green:375380
+Kahnawake:375412
+Kannapolis:375449
+Kennedy Township:376509
+Kent:376544
+Kernen:378504
+Kernen im Remstal:378581
+Kernen-Stetten:378626
+King:378650
+King City:378700
+Kingussie:378808
+Kirkcaldy:378836
+Kirkland:379011
+Kirknewton:379279
+Kirtland:379299
+Kleinburg:379425
+Korntal-Münchingen:379497
+Kornwestheim:379625
+L'Ile-Perrot:379890
+L'assomption:379912
+L'ile-Bizard:379934
+L'ile-Perrot:379965
+L'Île-Bizard:380021
+L'Île-Perrot:380043
+L'Île-Perrôt:380093
+La Baie:380117
+La Prairie:380152
+La Salle:380287
+LaSalle:380339
+Lachenaie:380381
+Lachine:380409
+Lachute:380739
+Lacolle:380765
+Lagrange:380782
+Lake Las Vegas:380844
+Lake Norman:380868
+Lake Park:380889
+Lake Wylie:380908
+Lakewood:381201
+Lambton:385175
+Las  Vegas:385192
+Las Vegas:385248
+Las Vegas East:604337
+Las Vegas NV:604361
+Las Vegas Strip:604383
+Las Vegas, NV:604408
+Las Vegass:604431
+Las vegas:604451
+LasVegas:604495
+Lasalle:604513
+Lasswade:605064
+Lauder:605109
+Laval:605134
+Lavaltrie:607731
+Laveen:607750
+Laveen Village:608779
+Lawrence:608890
+Le Haut-Saint-Laurent Regional County Municipality:608907
+Le Sud-Ouest:608967
+Leaside:608989
+Leetsdale:609006
+Leinfelden:609088
+Leinfelden-Echterdingen:609116
+Leith:609828
+Leonberg:609912
+Leslieville:610296
+Leven:610317
+Liberty:610332
+Library:610349
+Linden:610383
+Lingen:610408
+Litchfield:610424
+Litchfield Park:610496
+Livingston:612109
+Livingstone:612419
+Loanhead:612440
+London:612511
+Longniddry:612527
+Longueuil:612547
+Lorain:612981
+Lothian:613703
+Lowell:613719
+Lower Burrell:613823
+Lower Lawrenceville:613942
+Lowesville:613971
+Ludwigsburg:613999
+Lyndhurst:615706
+MC Murray:616527
+MESA:616546
+Macedonia:617374
+Madison:618148
+Mahomet:643737
+Malton:644043
+Mansfield:644058
+Mantua:644086
+Maple:644195
+Maple Grove:644607
+Maple Heights:644628
+Markham:644900
+Mascouche:657186
+Mathews:657211
+Mattews:657228
+Matthews:657244
+Mayfield:662396
+Mayfield Heights:662503
+Mayfield Heights (Cleveland):663627
+Mayfield Heights.:663665
+Mayfield Hts:663692
+Mayfield Hts.:663714
+Mayfield Village:663737
+Mc Donald:663843
+Mc Farland:663870
+Mc Kees Rocks:664112
+Mc Murray:664412
+McAdenville:664491
+McCandless:664529
+McCandless Township:664585
+McDonald:664659
+McFarland:664686
+McKees Rocks:664900
+McKeesport:665375
+McKnight:665785
+McMasterville:665812
+McMurray:665835
+McMurry:666427
+Mccandless Township:666461
+Mckeesport:666490
+Mcmurray:666510
+Median:666537
+Medina:666553
+Medina Township:668649
+Mentor:668683
+Mentor On the:671766
+Mentor On the Lake:671825
+Mentor-on-the-Lake:671907
+Mercier:672005
+Mesa:672031
+Mesa AZ:717485
+Mesa Arizona:717502
+Meza:717524
+Middleburg Heights:717538
+Middleburg Hts:718399
+Middleburg Hts.:718458
+Middlefield:718483
+Middleton:718742
+Midland:721282
+Midlothian:721403
+Millvale:721457
+Mint  Hill:721536
+Mint Hill:721556
+Mirabel:722235
+Missisauga:722260
+Mississauaga:722315
+Mississauga:722337
+Mississuaga:742783
+Monona:742804
+Monongahela:743768
+Monoroeville:743904
+Monreoville:743935
+Monroeville:743956
+Monroeville - Pit.:746762
+Mont-Royal:746790
+Mont-Saint-Gregoire:746944
+Mont-Saint-Hilaire:747000
+Monticello:747081
+Montral:747332
+Montreal:747348
+Montreal-Nord:749374
+Montreal-Ouest:749415
+Montreal-West:749448
+Montrose:749489
+Montréal:749507
+Montréal (Québec):795262
+Montréal-Nord:795291
+Montréal-Ouest:795315
+Montéal:795340
+Mooers:795358
+Moon:795374
+Moon Township:795439
+Moon Twp:795713
+Moreland Hills:795754
+Morgan:795830
+Morin-Heights:795845
+Morriston:795894
+Moss:795913
+Mount Albert:795970
+Mount Holly:796036
+Mount Horeb:796366
+Mount Lebanon:796733
+Mount Royal:796888
+Mount Washington:796909
+Mt Albert:796935
+Mt Lebanon:796954
+Mt. Horeb:797010
+Mt. Lebanon:797028
+Mt. Oliver Boro:797102
+Munhall:797127
+Municipality of Murrysville:797320
+Munroe Falls:797357
+Murrysville:797494
+Murrysville (Monroeville):798267
+Musselburgh:798301
+Möglingen:798485
+Münster:798541
+N E Las Vegas:798559
+N Las Vegas:798582
+N Ridgeville:798789
+N W Las Vegas:798820
+N. Las Vegas:798843
+N. OLMSTED:798908
+N. Olmsted:798928
+N. Randall:798948
+N. Ridgeville:798968
+NORTH YORK:798991
+Napierville:799020
+Nellis:799041
+Nellis AFB:799057
+Nellis Afb:799147
+Nellis Air Force Base:799229
+Neuhausen:799268
+Neville Island:799358
+New Eagle:799390
+New Kensington:799427
+New Town:799975
+Newbridge:800036
+Newburgh Heights:800072
+Newbury:800098
+Newhaven:800241
+Newington:800354
+Newmarket:800382
+Nobleton:802518
+Nord:802562
+North Braddock:802576
+North Huntingdon:802600
+North Huntington:802976
+North Las Vegas:803011
+North Olmstead:814120
+North Olmsted:814153
+North Olmsted,:816899
+North Queensferry:816923
+North Randall:816950
+North Ridgeville:817007
+North Royalton:817655
+North Scottsdale:818564
+North Toronto:818606
+North Versailles:818629
+North York:819041
+North of Brampton:827378
+NorthYork:827405
+Northfield:827424
+Northfield Center:828069
+Northfield Center Township:828096
+Northside:828132
+Norval:828151
+Notre-Dame-De-L'ile-Perrot:828167
+Nottingham:828212
+Novelty:828277
+Noyan:828311
+Oak Ridges:828335
+Oakdale:828355
+Oakland:828638
+Oakmont:828682
+Oakville:829045
+Oakwood Village:833818
+Ogden:833877
+Oka:833910
+Old Brooklyn:833941
+Old Port of Montreal:833963
+Old Scottsdale:833993
+Old Town:834016
+Old Town Scottsdale:834067
+Olivos:834096
+Olmsted Falls:834387
+Olmsted Township:834763
+Orange:834823
+Orange Village:834866
+Oregon:834908
+Ormstown:835429
+Ostfildern:835447
+Outremont:835876
+Painesville:836188
+Palmerston:836960
+Paoli:836980
+Paradise:837013
+Paradise Valley:837235
+Parma:838238
+Parma Heights:840069
+Paw Creek:840518
+Pencaitland:840535
+Penicuik:840555
+Peninsula:840681
+Penn Hills:840891
+Peoria:841093
+Peoria Ave Citizen's Group:854604
+Pepper Pike:854640
+Pepperpike:854810
+Peters Township:854830
+Pgh Int Arprt:854864
+Pheonix:854887
+Pheonix AZ:854931
+Philo:854951
+Phoenix:854981
+Phoenix AZ:993424
+Phoenix Valley:993444
+Phoenix metro area:993468
+Phoenix,:993496
+Phoenix, AZ:993514
+Phoneix:993535
+Phoniex:993561
+Phx:993578
+Pickering:993591
+Piedmont:995629
+Pierrefonds:995664
+Pilton:995973
+Pincourt:995989
+Pine:996007
+Pineville:996021
+Pitcairn:998429
+Pittsburch:998473
+Pittsburg:998493
+Pittsburgh:998539
+Pleasant Hills:1048807
+Plieningen:1049094
+Plum:1049114
+Plum Boro:1049232
+Point Claire:1049251
+Pointe Claire:1049273
+Pointe-Aux-Trembles:1049305
+Pointe-Claire:1049352
+Port Credit:1050026
+Portobello:1050063
+Presto:1050083
+Prestonpans:1050117
+Promenade:1050156
+Prévost:1050175
+Quartermile:1050202
+Queensferry:1050222
+Queensville:1050279
+Rainbow Valley:1050300
+Rankin:1050324
+Ranlo:1050349
+Rantoul:1050364
+Ratho:1050684
+Rawdon:1050699
+Regent Square:1050733
+Regional Municipality of York:1050756
+Reminderville:1050795
+Remseck:1050818
+Remseck am Neckar:1050880
+Repentigny:1050924
+Rexdale:1050970
+Richfield:1051013
+Richmond Heights:1051323
+Richmond Hil:1051466
+Richmond Hill:1051488
+Richmond Hts:1058306
+Ridgeville:1058355
+Rigaud:1058374
+Rillton:1058407
+River Drive Park:1058424
+Robinson:1058450
+Robinson Town:1058539
+Robinson Township:1058562
+Robinson Twp.:1058765
+Rocky River:1058788
+Roosevelt:1060596
+Rosemere:1060676
+Rosemère:1060777
+Roslin:1060849
+Ross:1060865
+Ross Township:1060888
+Rouses Point:1060956
+Roxboro:1061021
+Rural Ridge:1061038
+Russell:1061059
+Russell Twp:1061076
+Russellton:1061097
+S Concord:1061126
+SCOTTSDALE AZ:1061145
+SLOAN:1061168
+Sagamore Hills:1061183
+Saint - Hyacinthe:1061250
+Saint Anns:1061277
+Saint Joseph:1061297
+Saint Laurent:1061426
+Saint Leonard:1061475
+Saint-Antoine:1061497
+Saint-Basile-Le-Grand:1061520
+Saint-Bernard-De-Lacolle:1061550
+Saint-Bernard-de-Lacolle:1061584
+Saint-Bruno:1061618
+Saint-Bruno-de-Montarville:1061648
+Saint-Constant:1061710
+Saint-Eustache:1061751
+Saint-Henri:1061873
+Saint-Hippolyte:1061894
+Saint-Hubert:1061919
+Saint-Hyacinthe:1062083
+Saint-Isidore-De-Laprairie:1062170
+Saint-Jean-Sur-Richelieu:1062206
+Saint-Jean-sur-Richelieu:1062258
+Saint-Jerome:1062443
+Saint-Jérôme:1062591
+Saint-Lambert:1062651
+Saint-Laurent:1062842
+Saint-Lazare:1063806
+Saint-Leonard:1063846
+Saint-Marc-Sur-Richelieu:1064139
+Saint-Marc-sur-Richelieu:1064172
+Saint-Philippe:1064206
+Saint-Pierre-de-Véronne-à-Pike-River:1064228
+Saint-Roch-De-L'achigan:1064275
+Saint-Sauveur:1064308
+Saint-Sauveur-des-Monts:1064739
+Saint-sauveur:1064781
+Sainte-Adele:1064804
+Sainte-Adèle:1064862
+Sainte-Anne-De-Bellevue:1064893
+Sainte-Anne-de-Bellevue:1064978
+Sainte-Anne-des-Plaines:1065063
+Sainte-Catherine:1065096
+Sainte-Dorothée:1065129
+Sainte-Genevieve:1065155
+Sainte-Julie:1065190
+Sainte-Madeleine:1065299
+Sainte-Marguerite-du-Lac-Masson:1065325
+Sainte-Marie:1065366
+Sainte-Marthe:1065388
+Sainte-Therese:1065411
+Sainte-Thérèse:1065471
+Sainte-Thérèse-de-Blainville:1065515
+Sainte-thérèse:1065555
+Salaberry-De-Valleyfield:1065581
+San Rafael:1065642
+San Tan:1065662
+San Tan Valley:1065679
+Savoy:1066367
+Scarborough:1066962
+Scarborough,:1074658
+Scarbrough:1074680
+Scaroborough:1074700
+Scarobrough:1074722
+Schomberg:1074743
+Schottsdale:1074804
+Schwaikheim:1074825
+Schwieberdingen:1074864
+Schönaich:1074952
+Scotesdale:1075068
+Scotland:1075088
+Scott Township:1075106
+Scottdale:1075130
+Scottsdale:1075185
+Seven Hills:1141550
+Sewickley:1141785
+Shady Side:1142622
+Shadyside:1142642
+Shaker Heights:1142678
+Shaker Hts:1143126
+Shaler:1143145
+Shaler Township:1143161
+Shandwick:1143194
+Sharpsburg:1143213
+Sheffield:1143277
+Sheffield Lake:1143330
+Sheffield Village:1143452
+Shorewood Hills:1143681
+Side Slopes:1143714
+Sidney:1143734
+Silver Lake:1143750
+Sindelfingen:1143779
+Sindelfingen/Eichholz:1144851
+Sloan:1144882
+Solon:1144897
+South Amherst:1146497
+South Euclid:1146520
+South Gyle:1147133
+South Hills:1147152
+South Las Vegas:1147173
+South Mountain:1147241
+South Park:1147265
+South Park Township:1147330
+South Queensferry:1147402
+Southside Flats:1147535
+Spring Hill City View:1147560
+Spring Valley:1147591
+Springdale:1147673
+Springfield:1147786
+Squirrel Hill:1147807
+St Bernard de Lacolle:1147848
+St Davids:1147879
+St Joseph:1147915
+St Leonard:1147943
+St-Benoît de Mirabel:1147963
+St-Bruno-de-Montarville:1147994
+St-Eugène:1148026
+St-Jerome:1148045
+St-Laurent:1148064
+St-Lazare:1148084
+St-Lazare-de-Vaudreuil:1148103
+St-Leonard:1148135
+St. Anns:1148163
+St. Jean Sur Richelieu:1148181
+St. Joseph:1148212
+Stallings:1148231
+Stanley:1148401
+Statesville:1148526
+Ste-Adele:1148547
+Ste-Rose:1148566
+Ste-Therese-de-Blainville:1148584
+Steinenbronn:1148619
+Stetson Valley:1148694
+Stetten:1148718
+Stockbridge:1148735
+Stoney Creek:1148783
+Stouffville:1148814
+Stoughton:1149225
+Stow:1149978
+Stowe:1151606
+Stowe Township:1151696
+Straiton:1151720
+Streetsboro:1151738
+Streetsville:1152748
+Strip District:1152787
+Strongsville:1152811
+Strongville:1155374
+Stuttgart:1155395
+Stuttgart - Bad Cannstatt:1172859
+Stuttgart Bad-Canstatt:1172894
+Stuttgart-Vaihingen:1172925
+Summerlin:1172961
+Summerlin South:1173025
+Sun City:1173058
+Sun City Anthem:1174731
+Sun City Grand:1174756
+Sun City West:1174780
+Sun Lakes:1175427
+Sun Prairie:1175625
+Sunnyslope:1177297
+Sunrise:1177317
+Surprise:1177334
+Surprise Crossing:1185601
+Swissvale:1185627
+TORONTO:1185690
+Tallmadge:1185716
+Tega Cay:1186128
+Tempe:1186333
+Terrebonne:1221268
+The Promenade:1221377
+Thorncliffe Park:1221400
+Thornhil:1221426
+Thornhill:1221444
+Tolleson:1224066
+Tolono:1225051
+Topaz:1225067
+Toronto:1225080
+Toronto, Ontario:1361832
+Totronto:1361858
+Tottenham:1361875
+Trafford:1361894
+Tranent:1362008
+Tremont:1362034
+Troy Township:1362060
+Turtle Creek:1362083
+Tuscola:1362230
+Twinsburg:1362458
+Unionville:1363342
+University Heights:1363664
+University Ht:1363953
+University Hts :1363976
+Upper Saint Clair:1364001
+Upper St Clair:1364055
+Upper St. Clair:1364105
+Urbana:1364157
+Valley City:1367310
+Valley View:1367390
+Vanier:1367579
+Vaudreuil:1367603
+Vaudreuil-Dorion:1367622
+Vaughan:1367983
+Vaughn:1373735
+Vaughn City:1373751
+Venetia:1373772
+Verdun:1373807
+Verona:1374940
+Vieux Montreal:1376193
+Vilas:1376217
+Villa Grove:1376232
+Vimont:1376253
+W Henderson:1376286
+W Spring Valley:1376307
+WICKLIFFE:1376332
+Waddell:1376512
+Waiblingen:1376616
+Walton Hills:1377055
+Warrensvile Heights:1377093
+Warrensville:1377122
+Warrensville Heights:1377153
+Warrensville Hts:1377468
+Warrensville Hts.:1377503
+Water of Leith:1377530
+Waunakee:1377554
+Waxhaw:1378160
+Weddington:1379224
+Wesley Chapel:1379288
+West Akron:1379444
+West Elizabeth:1379464
+West Homestead:1379488
+West Lothian:1379651
+West Mifflin:1379673
+West Toronto:1380660
+West View:1380682
+Westlake:1380797
+Westmount:1383552
+Weston:1384237
+Westview:1384253
+Westworld Scottsdale:1384271
+Wexford:1384301
+Whiitby:1386278
+Whitby:1386295
+Whitchurch-Stouffville:1388651
+White Oak:1388982
+Whitney:1389184
+Whtiby:1389201
+Wickliffe:1389225
+Wildwood:1389535
+Wilkins Township:1389562
+Wilkinsburg:1389587
+Willoughby:1389660
+Willoughby Hills:1391379
+Willowdale:1391726
+Willowick:1391790
+Wilmerding:1392206
+Windsor:1392280
+Wolfschlugen:1392403
+Woodbridge:1392425
+Woodbridge (Vaughan):1394024
+Woodmere:1394054
+Woodmere Village:1394563
+York:1394589
+York Regional Municipality:1395379
+Youngtown:1395424
+chandler:1395818
+clinton:1395836
+columbia station:1395880
+etobicoke:1395949
+frazer:1395977
+las vegas:1395993
+mesa:1396250
+nboulder city:1396264
+oakville:1396287
+peoria:1396304
+tempe arizona:1396329
+toronto:1396352
+Île des Soeurs:1396396
+Île-des-Soeurs:1396420
