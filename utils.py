@@ -10,7 +10,7 @@ import sys
 # Set TESTMODE to True if you want to see intermediate calculations
 """DEBUGGING METHODS
 """
-TESTMODE = False
+TESTMODE = True
 PAUSETIME = False
 
 def get_testmode():
@@ -26,6 +26,25 @@ def test_print(caption, term):
             term = term.encode(sys.stdout.encoding)
             print(caption, ' : ', term)
 
+def get_pausetime():
+    return PAUSETIME
+
+def pause_printtime(caption, previous_checkpoint_time):
+    """
+    DESCRIPTION: If PAUSETIME is set, pause the program and measure time between checkpoints
+    INPUT: 
+    OUTPUT: 
+    """
+    pause_time = time.time()
+    if PAUSETIME == True:
+        print('\n**PAUSETIME** ', caption, ':', pause_time - previous_checkpoint_time, 'seconds\n')
+    
+        input('Press enter to continue')
+        delay_time = time.time() - pause_time
+        return (pause_time + delay_time, time.time())
+    else:
+        return (pause_time, time.time())
+
 
 """DIRECTORY AND FILENAME METHODS
 """
@@ -40,25 +59,41 @@ def get_directory(name):
     
     return dir
 
+
 def get_table_directory():
     return get_directory('tables')
     
 
 def get_csv_fullpath(csv_filename):
-    # TODO: protection for when a full path is sent to this function
-    csv_fullpath = os.path.join(get_table_directory(), csv_filename)
+    """GET_CSV_FULLPATH
+    DESCRIPTION: Get the fullpath of a CSV file in the /tables directory
+    INPUT: string csv_filename: filename of target CSV file (with extension, without path)
+    OUTPUT: string csv_fullpath: full path and filename of CSV file
+    """
+    table_directory = get_table_directory()
+    if table_directory in csv_filename:
+        # Case: fullpath, not a filename, sent to this function; return the input
+        csv_fullpath = csv_filename
+    else:
+        # Append table_directory to csv_filename
+        csv_fullpath = os.path.join(table_directory, csv_filename)
     return csv_fullpath
     
+    
 def csv_to_table(csv_filename):
+    """CSV_TO_TABLE
+    DESCRIPTION: Get CSV filename from table name, i.e., remove file extension from .csv files
+    INPUT: string csv_filename: filename (with extension, with or without path)
+    OUTPUT: string table_name: name of data table (i.e., .csv filename without extension)
     """
-    DESCRIPTION: Remove file extension from .csv files
-    INPUT: csv_filename: filename (with extension)
-    OUTPUT: table name (filename without extension)
-    """
+    # Remove path in case fullpath was sent instead of just filename
+    csv_filename = os.path.basename(csv_filename)
+    
     if csv_filename.endswith('.csv'):
+        # If it's a .csv file, strip the extension and return the rest
         table_name = csv_filename[0:len(csv_filename)-4]
     else:
-        # If it's not a .csv, just throw the original back over the wall...
+        # If it's not a .csv, return the original
         table_name = csv_filename
     return table_name
 
@@ -151,19 +186,6 @@ def get_attribute_list(csv_fullpath):
         reader = csv.reader(f)
         attribute_list = next(reader)
     return attribute_list
-
-
-def get_attribute_dict(table_list):
-    # Loop through table list
-    # Build attribute_list for each table
-    attribute_dict = {}
-    for table_name in table_list:
-        csv_fullpath = table_to_csv_fullpath(table_name)
-        attribute_dict[table_name] = get_attribute_list(csv_fullpath)
-    
-    # Return attribute_list for each table
-    
-    return attribute_dict
 
 
 """EVALUATION METHODS
@@ -293,21 +315,35 @@ def combine_table_attribute_pair(t, a):
         result = t + '.'
     result = result + a
     return result
+            
 
-def get_attribute_index(ta, attribute_dict):
-    # Default input: table_attr_split [t, a]
+def get_attribute_index(table_attr):
+    """GET_ATTRIBUTE_INDEX
+    DESCRIPTION: For a given table-attribute pair, find the column number (zero indexing)
+        of the attribute in the table.
+    INPUT: table_attr: table name and attribute name pair in one of two forms: (1) string,
+        table_name.attr_name; (2) list, [table_name, attr_name]
+    OUTPUT: int result: position number of attr_name in header row list of table_name if
+        the attribute name is found; otherwise returns None
+    """
+    # Case 1: combined: table_name.attr_name
+    # Case 2: split [table_name, attr_name]
     
-    if '.' in ta:
-        # Case: ta = table.attribute pair - split it out
-        ta = parse_table_attribute_pair(ta)
+    if '.' in table_attr:
+        # Case 1: table_attr = table.attribute pair - split it out
+        [table_name, attr_name] = parse_table_attribute_pair(table_attr)
+    else:
+        # Case 2: table_attr already split into [table_name, attr_name]
+        [table_name, attr_name] = table_attr
     
-    table = ta[0]
-    attr = ta[1]
+    csv_fullpath = table_to_csv_fullpath(table_name)
+    # full list of attribute names in this table_name
+    attribute_list = get_attribute_list(csv_fullpath)
     
     result = None
-    
-    for i in range(len(attribute_dict[table])):
-        if attr == attribute_dict[table][i]:
+    # Find the position of the attr_name in the list of attributes
+    for i in range(len(attribute_list)):
+        if attr_name == attribute_list[i]:
             result = i
             break
     

@@ -8,6 +8,7 @@ SELECT B1.Name, B1.Country, B1.State FROM BostonMarathon2016 B1, BostonMarathon2
 
 
 SELECT Name, Year, Winner FROM oscars WHERE Year = 2013 AND Winner = 1
+SELECT Name, Year, Winner FROM oscars O WHERE Year = 2013 AND Winner = 1
 SELECT Year, Film, Name, Winner FROM oscars WHERE Name LIKE %Pitt%
 
 create index movies keyword director_name
@@ -75,3 +76,22 @@ SELECT B.name, B.postal_code, R.review_id, R.stars, R.useful FROM business B, re
 
 
 SELECT DISTINCT B.name FROM business B, review-1m R, photos P WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id
+
+
+1
+SELECT R.review_id, R.funny, R.useful FROM review-1m R WHERE R.funny >= 20 AND R.useful > 30
+
+2
+SELECT B.name, B.city, B.state FROM business B WHERE B.city = 'Champaign' AND B.state = 'IL'
+
+3
+SELECT B.name, B.postal_code, R.stars, R.useful FROM business B, review-1m R WHERE B.name = 'Sushi Ichiban' AND B.postal_code = '61820' AND B.business_id = R.business_id
+
+4
+SELECT R1.user_id, R2.user_id, R1.stars, R2.stars FROM review-1m R1, review-1m R2 WHERE R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50 AND R1.business_id = R2.business_id
+
+5
+SELECT B.name, B.city, B.state, R.stars, P.label FROM business B, review-1m R, photos P WHERE B.city = 'Champaign' AND B.state = 'IL' AND R.stars = 5 AND P.label = 'inside' AND B.business_id = R.business_id AND B.business_id = P.business_id
+
+6
+SELECT B.name, R1.user_id, R2.user_id FROM business B, review-1m R1, review-1m R2 WHERE R1.stars = 5 AND R2.stars = 1 AND R1.useful > 50 AND R2.useful > 50 AND B.business_id = R1.business_id AND R1.business_id = R2.business_id

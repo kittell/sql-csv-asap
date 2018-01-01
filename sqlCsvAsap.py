@@ -122,9 +122,12 @@ def cmd_query():
         # START TIMER - after receiving user query
         start_time = time.time()
         
-        # Parse  Perform  Display results.
+        # Parse user query into Query object
         Q = Query(user_query)
-        I.load_indexes(Q)
+        (start_time, checkpoint_time) = pause_printtime('parse query:', start_time)
+        # Load indexes relevant to query
+        # I.load_indexes(Q) -- TODO: deprecating this
+        # Perform query, return list of lists containing results, then display
         query_result_list = perform_query(Q, I)
         display_query_result(query_result_list)
     
